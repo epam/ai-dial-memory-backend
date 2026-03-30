@@ -346,13 +346,199 @@ Agent: "Based on our earlier discussion where Redis came out ahead for persisten
 
 ## Architecture
 
-> To be filled by **@architect**
+### Overview
+
+The server is a **FastAPI** application exposing two interfaces — MCP tools (HTTP transport) and a REST API — backed by a LanceDB-on-BLOB storage tier and a DIAL SDK integration layer. All dependencies are wired via **[Injector](https://injector.readthedocs.io/)** (Google Guice-style DI for Python).
+
+---
+
+### Module / Directory Layout
+
+```
+ai-dial-memory-mcp/
+├── main.py                        # Entry point — creates Injector, builds FastAPI app, starts Uvicorn
+├── pyproject.toml
+└── app/
+    ├── di/
+    │   └── modules.py             # Injector Module definitions (AppModule, StorageModule, DialModule)
+    ├── config/
+    │   └── settings.py            # Pydantic BaseSettings — env vars + DIAL app properties
+    ├── models/
+    │   └── memory.py              # Pydantic domain models: MemoryRow, StoreMemoryInput, RetrieveResponse, …
+    ├── api/
+    │   ├── router.py              # Mounts sub-routers; wires Injector into FastAPI dependency injection
+    │   ├── memory_router.py       # GET /memory, GET /memory/{id}, DELETE /memory/{id}  (FR-2)
+    │   └── retrieve_router.py     # GET /memory/retrieve  (FR-5, server-to-server)
+    ├── mcp/
+    │   └── tools.py               # MCP tool definitions: store_memory, search_archive  (FR-1)
+    ├── services/
+    │   └── memory_service.py      # MemoryService — all business logic; orchestrates repo + sync
+    ├── storage/
+    │   ├── sync.py                # StorageSync — sync-down / sync-up with DIAL file storage
+    │   └── repository.py          # MemoryRepository — LanceDB table operations (append, query, delete)
+    ├── dial/
+    │   └── client.py              # DialClient — thin wrapper around aidial-client (bucket resolution, file upload/download)
+    └── middleware/
+        └── auth.py                # FastAPI dependency: extract Api-Key header → resolve user bucket
+```
+
+---
+
+### Component Breakdown
+
+| Component | Exists? | Role |
+|-----------|---------|------|
+| `main.py` | Yes (stub) | Wire Injector → build FastAPI app → start server |
+| `app/config/settings.py` | No — create | Pydantic `BaseSettings`; reads env vars; exposes DIAL app properties |
+| `app/models/memory.py` | No — create | All shared Pydantic models (domain + API contracts) |
+| `app/di/modules.py` | No — create | Injector `Module` subclasses binding interfaces to implementations |
+| `app/middleware/auth.py` | No — create | FastAPI dependency that extracts the `Api-Key` header and resolves the user's bucket |
+| `app/dial/client.py` | No — create | `DialClient` wrapping `aidial-client`; bucket resolution, file upload/download |
+| `app/storage/sync.py` | No — create | `StorageSync` — sync-down before ops, sync-up after writes |
+| `app/storage/repository.py` | No — create | `MemoryRepository` — LanceDB append, FTS query, delete, schema creation |
+| `app/services/memory_service.py` | No — create | `MemoryService` — orchestrates sync + repo; implements store, search, retrieve |
+| `app/mcp/tools.py` | No — create | MCP tool handlers; thin wrappers over `MemoryService` |
+| `app/api/memory_router.py` | No — create | FastAPI REST routes for FR-2 |
+| `app/api/retrieve_router.py` | No — create | FastAPI REST route for FR-5 |
+| `app/api/router.py` | No — create | Mounts all sub-routers; bridges Injector → FastAPI |
+
+---
+
+### Key Interfaces and Data Contracts
+
+```python
+# app/models/memory.py
+
+class MemoryRow(BaseModel):
+    id: str                              # UUID
+    memory_type: Literal["core", "episodic"]
+    content: str
+    context: str
+    importance: float                    # 0.0–1.0
+    embedding_model: str | None          # null in Phase 1
+    vector: list[float] | None           # null in Phase 1
+    timestamp: datetime
+    access_count: int
+
+class StoreMemoryInput(BaseModel):
+    content: str
+    memory_type: Literal["core", "episodic"]
+    context: str
+    importance: float = Field(ge=0.0, le=1.0)
+
+class StoreMemoryOutput(BaseModel):
+    id: str
+    stored: bool
+
+class RetrieveRequest(BaseModel):
+    query: str
+    tier1_limit: int = 5
+    tier2_limit: int = 10
+
+class RetrieveResponse(BaseModel):
+    facts: list[MemoryRow]
+```
+
+```python
+# app/storage/repository.py  (interface sketch)
+
+class MemoryRepository(ABC):
+    def append(self, bucket: str, row: MemoryRow) -> None: ...
+    def get(self, bucket: str, id: str) -> MemoryRow | None: ...
+    def list(self, bucket: str, memory_type: str | None) -> list[MemoryRow]: ...
+    def delete(self, bucket: str, id: str) -> None: ...
+    def fts_search(self, bucket: str, query: str, memory_type: str, limit: int) -> list[MemoryRow]: ...
+    def top_by_importance(self, bucket: str, memory_type: str, limit: int) -> list[MemoryRow]: ...
+```
+
+```python
+# app/dial/client.py  (interface sketch)
+
+class DialClient(ABC):
+    async def resolve_bucket(self, api_key: str) -> str: ...
+    async def download(self, api_key: str, remote_path: str, local_path: Path) -> None: ...
+    async def upload(self, api_key: str, local_path: Path, remote_path: str) -> None: ...
+```
+
+---
+
+### Design Patterns and Rationale
+
+| Pattern | Where | Rationale |
+|---------|-------|-----------|
+| **Repository** | `MemoryRepository` | Decouples LanceDB from the service layer; Phase 2 vector search is a new implementation, not a code change |
+| **Sync Gateway** (custom) | `StorageSync` | Encapsulates the sync-down/sync-up lifecycle; every consumer gets atomic "fetch → operate → flush" semantics without knowing about BLOB details |
+| **Service Layer** | `MemoryService` | Single place for business logic (two-tier retrieval, deduplication, locking); API and MCP handlers are thin call-throughs |
+| **Dependency Injection (Injector)** | `app/di/modules.py` | All wiring is explicit and testable; no global singletons; `AppModule` composes `StorageModule` + `DialModule` |
+| **Strategy (Phase 2)** | `SearchStrategy` interface | FTS (Phase 1) and vector search (Phase 2) are swappable without touching `MemoryService` |
+
+---
+
+### Dependency Injection Design (Injector)
+
+Three `Module` subclasses compose into one root `AppModule`:
+
+```python
+class DialModule(Module):
+    # Binds DialClient → AiDialClientImpl
+    # Provides Settings (singleton)
+
+class StorageModule(Module):
+    # Binds MemoryRepository → LanceDbMemoryRepository
+    # Binds StorageSync → DialStorageSync
+    # Binds SearchStrategy → FtsSearchStrategy  (Phase 1)
+
+class AppModule(Module):
+    # Composes DialModule + StorageModule
+    # Provides MemoryService
+```
+
+`main.py` creates `Injector([AppModule()])`. FastAPI route handlers receive their `MemoryService` via a `Depends(...)` factory that calls `injector.get(MemoryService)` — keeping FastAPI's own DI for HTTP concerns (header extraction, request validation) and Injector for the object graph.
+
+---
+
+### Cross-cutting Concerns
+
+**Authentication / User Identity**
+- Every request (MCP and REST) must carry an `Api-Key` header.
+- A FastAPI dependency (`app/middleware/auth.py`) extracts the key and calls `DialClient.resolve_bucket()` to produce a `UserContext(api_key, bucket)`.
+- `UserContext` is passed down through the service and repository — it is never stored as process state.
+
+**Concurrency / Locking**
+- Concurrent requests from the same user are serialized by a per-bucket `asyncio.Lock` held in `StorageSync`.
+- Lock granularity is the bucket ID, so different users are never blocked by each other.
+
+**Error Handling**
+- `StorageSync` failures (upload/download errors) are raised as `StorageSyncError`; the API layer maps these to `503 Service Unavailable`.
+- LanceDB operation errors surface as `500 Internal Server Error` with structured log output.
+- MCP tool errors are returned as MCP error responses (not HTTP 500s).
+
+**Logging**
+- Structured JSON logging (stdlib `logging` + `python-json-logger`) with `request_id` and `bucket` fields on every log line.
+
+**Phase 2 extension point**
+- `SearchStrategy` ABC with a `search(bucket, query, memory_type, limit) -> list[MemoryRow]` method.
+- `FtsSearchStrategy` (Phase 1) and `VectorSearchStrategy` (Phase 2) are bound in `StorageModule` — switching phases is a one-line Module change.
+
+---
+
+### Technology Choices
+
+| Concern | Choice | Notes |
+|---------|--------|-------|
+| Web framework | **FastAPI** | Async, OpenAPI out of the box, integrates with MCP HTTP transport |
+| MCP transport | **FastMCP** or **mcp[http]** | HTTP/SSE; no WebSocket needed |
+| DI framework | **Injector** | Explicit, type-safe, testable; Google Guice style |
+| Vector / FTS store | **LanceDB** | Embedded, file-based, works with BLOB sync pattern |
+| DIAL SDK | **aidial-client** (`ai-dial-client-python`) | Bucket resolution, file upload/download |
+| Settings | **Pydantic BaseSettings** | Env-var driven, validated at startup |
+| Locking | **asyncio.Lock** (in-process) | Sufficient for Phase 1 single-instance deployment |
 
 ---
 
 ## Active Plan
 
-> To be filled by **@tech-lead**
+⚠️ Architecture changed — @tech-lead must re-run to regenerate the plan.
 
 ---
 
