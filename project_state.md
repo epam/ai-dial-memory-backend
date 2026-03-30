@@ -72,6 +72,8 @@ The server MUST expose two MCP tools:
 | `store_memory` | Append a new memory row. Append-only — never overwrites. | `content: str`, `memory_type: Literal["core","episodic"]`, `context: str`, `importance: float (0.0–1.0)` |
 | `search_archive` | Search episodic history. Used when agent needs to recall past events not in the current context window. | `query: str` |
 
+**Authentication on MCP calls**: When the LLM agent decides to call a tool, quickapps-backend is the one that executes the MCP tool invocation against the Memory MCP server. quickapps-backend forwards the user's per-request API key as a header on that call. The server reads this key and uses it to resolve the user's bucket via `GET /v1/bucket` — the same mechanism used for REST API calls. User isolation is therefore enforced uniformly across both MCP tool calls and REST routes.
+
 ### FR-2: REST API for UI clients
 
 The server MUST expose HTTP routes for read/delete operations (agents are the only writers):
@@ -106,11 +108,72 @@ Routes are proxied through DIAL Core; the caller's identity is forwarded and the
 
 ### FR-5: Core-fact retrieval endpoint (for quickapps injection)
 
-The server MUST expose an endpoint that quickapps-backend calls before each agent turn to retrieve core facts for injection into the system prompt:
+quickapps-backend calls this endpoint **once per agent turn, before the agent runs**, to retrieve the core facts that will be injected into the system prompt for that turn. The agent never calls this endpoint — it is a server-to-server call only.
 
-- **Tier 1** — top-N core facts by importance (always injected).
-- **Tier 2** — core facts matching the current user message (FTS in Phase 1, vector search in Phase 2), scored as `importance`-weighted relevance.
-- Both tiers are merged and deduplicated by `id` before returning.
+#### HTTP contract
+
+```
+GET /memory/retrieve?query=<user message>&tier1_limit=5&tier2_limit=10
+Api-Key: <per-request API key forwarded by DIAL Core>
+```
+
+- `query` — the user's current message text. Used by the server for Tier 2 FTS (Phase 1) or vector search (Phase 2). Required.
+- `tier1_limit` — optional, default 5. Number of top facts returned by importance.
+- `tier2_limit` — optional, default 10. Number of facts matched to `query`.
+- The API key is a per-request key forwarded by DIAL Core. The server uses it to resolve the user's bucket and authenticate downstream DIAL API calls.
+
+#### Response
+
+```json
+{
+  "facts": [
+    {
+      "id": "uuid-1",
+      "content": "User prefers TypeScript for all code examples",
+      "context": "user-prefs",
+      "importance": 0.9,
+      "timestamp": "2026-03-28T10:00:00Z"
+    },
+    {
+      "id": "uuid-2",
+      "content": "Project Alpha uses CockroachDB",
+      "context": "project-alpha",
+      "importance": 0.85,
+      "timestamp": "2026-03-30T09:00:00Z"
+    }
+  ]
+}
+```
+
+The list is already **merged and deduplicated by `id`**. Tier 1 facts always appear first. quickapps-backend formats these into a system prompt block (e.g. "Known facts about you: …") and injects it — no further processing is needed on the server.
+
+#### Two-tier retrieval logic
+
+| Tier | Query | Scoring | Default limit |
+|------|-------|---------|---------------|
+| **Tier 1** — always inject | No query. `SELECT … WHERE memory_type='core' ORDER BY importance DESC` | Importance only | 5 |
+| **Tier 2** — context inject | FTS (Phase 1) or vector search (Phase 2) over `memory_type='core'`, matched to `query` | `final_score = similarity * (0.5 + importance * 0.5)` | 10 |
+
+Results from both tiers are merged and deduplicated by `id` before returning. Tier 1 facts always appear before Tier 2 facts in the response list.
+
+#### Pre-turn injection flow
+
+```
+quickapps-backend                    Memory MCP Server               LanceDB (local /tmp)
+       |                                     |                               |
+       |  GET /memory/retrieve               |                               |
+       |  ?query=<user message>      ------> |                               |
+       |                                     |  sync down memory.lance/  --> |
+       |                                     |  Tier 1: top-5 by importance  |
+       |                                     |  Tier 2: FTS match to query   |
+       |                                     |  merge + deduplicate          |
+       |  { facts: [...] }           <------ |                               |
+       |                                     |                               |
+       | inject facts into system prompt     |                               |
+       | run agent turn                      |                               |
+```
+
+No sync-up after this call — it is a read-only operation. `access_count` is incremented for returned rows (write is batched or fire-and-forget to avoid blocking the agent turn).
 
 ### FR-6: DIAL Application Type integration
 
@@ -298,7 +361,7 @@ Agent: "Based on our earlier discussion where Redis came out ahead for persisten
 | # | Question | Decision |
 |---|----------|----------|
 | 1 | **Sync concurrency** | Use **simple per-user file locking**. Only the authenticated user can access their bucket; concurrent requests from the same user are serialized with a local lock keyed on the user's bucket ID. |
-| 2 | **DIAL Python SDK** | Use [`aidial-client`](https://github.com/epam/ai-dial-client-python) (`ai-dial-client-python`). It handles file upload/download (`client.files.*`), `my_files_home()` for bucket resolution, and bearer token forwarding. Add to `pyproject.toml`. |
+| 2 | **DIAL Python SDK** | Use [`aidial-client`](https://github.com/epam/ai-dial-client-python) (`ai-dial-client-python`). It handles file upload/download (`client.files.*`), `my_files_home()` for bucket resolution, and per-request API key forwarding. Add to `pyproject.toml`. |
 | 3 | **Episodic write ownership** | The **MCP server stores both `core` and `episodic` rows**. All write decisions belong to the orchestrating agent; the server is storage-only and accepts `store_memory` for either type without restriction. |
-| 4 | **Embedding API (Phase 2)** | Use **DIAL Core's own embeddings endpoint** via `aidial-client`, forwarding the caller's bearer token. The embedding model deployment name (e.g. `text-embedding-ada-002`) is declared in the Application Type schema and read at runtime via `request_dial_application_properties()`. The `embedding_model` column stores which model was used, enabling the cross-model safety guard (rows with a different model fall back to FTS). |
+| 4 | **Embedding API (Phase 2)** | Use **DIAL Core's own embeddings endpoint** via `aidial-client`, forwarding the caller's per-request API key. The embedding model deployment name (e.g. `text-embedding-ada-002`) is declared in the Application Type schema and read at runtime via `request_dial_application_properties()`. The `embedding_model` column stores which model was used, enabling the cross-model safety guard (rows with a different model fall back to FTS). |
 | 5 | **`applicationTypeViewerUrl` / `applicationTypeEditorUrl`** | Declare **placeholder values** in the Application Type schema for both `applicationTypeViewerUrl` (memory browser UI) and `applicationTypeEditorUrl` (configuration wizard). Custom UIs follow their own logic and are out of scope for this server. |
