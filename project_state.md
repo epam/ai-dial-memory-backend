@@ -377,7 +377,7 @@ ai-dial-memory-mcp/
     │   ├── sync.py                # StorageSync — sync-down / sync-up with DIAL file storage
     │   └── repository.py          # MemoryRepository — LanceDB table operations (append, query, delete)
     ├── dial/
-    │   └── client.py              # DialClient — thin wrapper around aidial-client (bucket resolution, file upload/download)
+    │   └── dial_storage.py        # DialStorageService — thin wrapper around AsyncDial (storage home resolution, file upload/download)
     └── middleware/
         └── auth.py                # FastAPI dependency: extract Api-Key header → resolve user bucket
 ```
@@ -393,7 +393,7 @@ ai-dial-memory-mcp/
 | `app/models/memory.py` | No — create | All shared Pydantic models (domain + API contracts) |
 | `app/di/modules.py` | No — create | Injector `Module` subclasses binding interfaces to implementations |
 | `app/middleware/auth.py` | No — create | FastAPI dependency that extracts the `Api-Key` header and resolves the user's bucket |
-| `app/dial/client.py` | No — create | `DialClient` wrapping `aidial-client`; bucket resolution, file upload/download |
+| `app/dial/dial_storage.py` | No — create | `DialStorageService` wrapping `AsyncDial`; storage home resolution, file upload/download |
 | `app/storage/sync.py` | No — create | `StorageSync` — sync-down before ops, sync-up after writes |
 | `app/storage/repository.py` | No — create | `MemoryRepository` — LanceDB append, FTS query, delete, schema creation |
 | `app/services/memory_service.py` | No — create | `MemoryService` — orchestrates sync + repo; implements store, search, retrieve |
@@ -452,12 +452,15 @@ class MemoryRepository(ABC):
 ```
 
 ```python
-# app/dial/client.py  (interface sketch)
+# app/dial/dial_storage.py  (interface sketch)
 
-class DialClient(ABC):
-    async def resolve_bucket(self, api_key: str) -> str: ...
-    async def download(self, api_key: str, remote_path: str, local_path: Path) -> None: ...
-    async def upload(self, api_key: str, local_path: Path, remote_path: str) -> None: ...
+class DialStorageService:
+    """Thin stateless wrapper around AsyncDial. Creates a client per call using the forwarded API key."""
+
+    def _make_client(self, api_key: str) -> AsyncDial: ...
+    async def get_storage_home(self, api_key: str) -> str: ...   # e.g. "files/{bucket}"
+    async def download(self, api_key: str, remote_url: str, local_path: Path) -> None: ...
+    async def upload(self, api_key: str, local_path: Path, remote_url: str) -> None: ...
 ```
 
 ---
@@ -538,7 +541,191 @@ class AppModule(Module):
 
 ## Active Plan
 
-⚠️ Architecture changed — @tech-lead must re-run to regenerate the plan.
+> Owner: @tech-lead | Implements the Architecture section above | Follows CODESTYLE.md throughout
+
+---
+
+### Phase 0 — Project scaffolding & tooling
+
+- [ ] **0.1** `@backend-dev` — Add all direct dependencies to `pyproject.toml`:
+  - Runtime: `fastapi`, `uvicorn[standard]`, `injector`, `fastapi-injector`, `lancedb`, `pydantic-settings`, `ai-dial-client`, `python-json-logger`
+  - Dev/lint: `ruff`, `mypy`, `pytest`, `pytest-asyncio`, `httpx`
+- [ ] **0.2** `@backend-dev` — Add `[tool.ruff]` and `[tool.mypy]` sections to `pyproject.toml` (enable strict mode for mypy; ruff rules: `E`, `F`, `I`, `UP`, `B`)
+- [ ] **0.3** `@backend-dev` — Create the full directory skeleton with `__init__.py` files:
+  ```
+  app/
+    config/     dial/     storage/
+    services/   mcp/      api/
+    di/         middleware/
+  ```
+
+---
+
+### Phase 1 — Domain models (`app/models/memory.py`)
+
+> CODESTYLE §4, §8 — type hints, modern generics, Pydantic validation, no mutable defaults
+
+- [ ] **1.1** `@backend-dev` — Create `app/models/memory.py` with:
+  - `MemoryType` — `Literal["core", "episodic"]`
+  - `MemoryRow` — full schema per FR-4 (all fields typed, no mutable defaults)
+  - `StoreMemoryInput` — `content`, `memory_type`, `context`, `importance: float = Field(ge=0.0, le=1.0)`
+  - `StoreMemoryOutput` — `id: str`, `stored: bool`
+  - `RetrieveRequest` — `query: str`, `tier1_limit: int = 5`, `tier2_limit: int = 10`
+  - `RetrieveResponse` — `facts: list[MemoryRow]`
+- [ ] **1.2** `@qa-engineer` — Unit-test model validation: importance out of range raises, mutable-default-free fields, round-trip JSON serialisation
+
+---
+
+### Phase 2 — Configuration (`app/config/`)
+
+> CODESTYLE §2 — one settings class per module, `BaseSettings`, `Field(alias=...)`, no `os.getenv` in app code
+
+- [ ] **2.1** `@backend-dev` — Create `app/config/app_settings.py` → `AppSettings(BaseSettings)`:
+  - `dial_url: str = Field(alias="DIAL_URL")`
+  - `log_level: str = Field(default="INFO", alias="LOG_LEVEL")`
+  - `tmp_dir: Path = Field(default=Path("/tmp"), alias="TMP_DIR")`
+- [ ] **2.2** `@backend-dev` — Create `app/config/logging_config.py` — builds stdlib `logging` config from `AppSettings` (JSON format via `python-json-logger`); called once at startup, **not** via injector (per CODESTYLE §2 shared/cross-cutting note)
+
+---
+
+### Phase 3 — DIAL storage service (`app/dial/`)
+
+> Uses [`aidial-client`](https://github.com/epam/ai-dial-client-python) (`AsyncDial`) directly — no custom ABC needed.
+> CODESTYLE §1 — `@inject` on service class, bound in `DialModule`; §3 — protected attributes
+
+**Key SDK facts (from the package docs):**
+- `AsyncDial(api_key=<key>, base_url=<url>)` — created **per-call** because each request carries its own forwarded API key.
+- `await client.my_files_home()` — returns the caller's root storage path (e.g. `files/{bucket}`); use it to construct remote paths.
+- `client.files.upload(url=..., file=...)` / `client.files.download(url=...)` / `result.awrite_to(path)` — file I/O primitives.
+
+- [ ] **3.1** `@backend-dev` — Create `app/dial/dial_storage.py` → `DialStorageService`:
+  - `@inject` constructor takes `AppSettings` only; stores `_settings` (protected)
+  - `_make_client(api_key: str) -> AsyncDial` — private factory; creates `AsyncDial(api_key=api_key, base_url=self._settings.dial_url)`; called per public method, never stored as instance state (keeps the service stateless and request-key-safe)
+  - `async get_storage_home(api_key: str) -> str` — calls `await client.my_files_home()`; returns the caller's root storage path string (e.g. `"files/{bucket}"`)
+  - `async download(api_key: str, remote_url: str, local_path: Path) -> None` — calls `client.files.download(url=remote_url)` then `await result.awrite_to(str(local_path))`
+  - `async upload(api_key: str, local_path: Path, remote_url: str) -> None` — opens `local_path` in binary mode and calls `await client.files.upload(url=remote_url, file=f)`
+  - No business logic; raises `DialStorageError` (defined here) wrapping any SDK exception
+- [ ] **3.2** `@backend-dev` — Create `app/dial/dial_module.py` → `DialModule(Module)`:
+  - `configure()` binds `AppSettings → AppSettings, scope=singleton`
+  - `configure()` binds `DialStorageService → DialStorageService, scope=singleton`
+- [ ] **3.3** `@qa-engineer` — Unit-test `DialStorageService` with a mocked `AsyncDial`; assert `_make_client` is called with the correct `api_key` and `base_url`; assert `download` writes to the expected local path and `upload` reads from it
+
+---
+
+### Phase 4 — Storage layer (`app/storage/`)
+
+> CODESTYLE §1 — Repository ABC; §3 — protected internals; §9 — logging on sync errors
+
+- [ ] **4.1** `@backend-dev` — Create `app/storage/repository.py`:
+  - `MemoryRepository` ABC: `append`, `get`, `list_rows`, `delete`, `fts_search`, `top_by_importance`
+  - `LanceDbMemoryRepository(MemoryRepository)` decorated with `@inject`, constructor takes `AppSettings`
+  - Schema creation on first open (all FR-4 columns; `vector` nullable)
+  - Phase 1 `fts_search` → LanceDB FTS; `top_by_importance` → SQL ORDER BY importance DESC LIMIT n
+  - All LanceDB paths derived from `tmp_dir / bucket / "memory.lance"`
+- [ ] **4.2** `@backend-dev` — Create `app/storage/sync.py` → `StorageSync`:
+  - `@inject` constructor takes `DialStorageService` and `AppSettings`
+  - Per-bucket `asyncio.Lock` stored in a `dict[str, asyncio.Lock]` (protected attribute)
+  - Public async context manager `open(api_key: str, *, write: bool)`: calls `DialStorageService.get_storage_home(api_key)` to derive the remote path → acquires per-bucket lock → sync-down → yields `local_path: Path` → on write: sync-up → releases lock
+  - Remote path pattern: `{storage_home}/memory/memory.lance/`; local path: `tmp_dir / bucket_hash / "memory.lance"`
+  - `StorageSyncError` custom exception (defined in this module); wraps `DialStorageError` and any other I/O failures
+- [ ] **4.3** `@backend-dev` — Create `app/storage/storage_module.py` → `StorageModule(Module)`:
+  - Binds `MemoryRepository → LanceDbMemoryRepository, scope=singleton`
+  - Binds `StorageSync → StorageSync, scope=singleton`
+- [ ] **4.4** `@qa-engineer` — Unit-test `LanceDbMemoryRepository`: append row, list, FTS search, delete; use temp dir as `tmp_dir`
+- [ ] **4.5** `@qa-engineer` — Unit-test `StorageSync`: assert sync-down called before yield, sync-up called after write, lock prevents concurrent access for same bucket
+
+---
+
+### Phase 5 — Service layer (`app/services/`)
+
+> CODESTYLE §1 — injected dependencies only; §3 — protected; §9 — log at INFO/DEBUG
+
+- [ ] **5.1** `@backend-dev` — Create `app/services/memory_service.py` → `MemoryService`:
+  - `@inject` constructor takes `MemoryRepository`, `StorageSync`
+  - All public methods accept only `api_key: str` (no `bucket` — `StorageSync` resolves the storage home from the key)
+  - `async store(api_key: str, input: StoreMemoryInput) -> StoreMemoryOutput` — opens sync context (write=True), generates UUID, appends row
+  - `async search_archive(api_key: str, query: str) -> list[MemoryRow]` — opens sync context (write=False), FTS over `episodic` rows; increments `access_count` (fire-and-forget write)
+  - `async retrieve(api_key: str, req: RetrieveRequest) -> RetrieveResponse` — opens sync (write=False); runs Tier 1 (top_by_importance, core) + Tier 2 (fts_search, core, scored); merges, deduplicates by `id`, Tier 1 first; returns `RetrieveResponse`
+  - `async get_row(api_key: str, id: str) -> MemoryRow | None`
+  - `async list_rows(api_key: str, memory_type: str | None) -> list[MemoryRow]`
+  - `async delete_row(api_key: str, id: str) -> None`
+- [ ] **5.2** `@qa-engineer` — Unit-test `MemoryService` with mocked `MemoryRepository` and `StorageSync`; assert deduplication logic and Tier 1-before-Tier-2 ordering in retrieve
+
+---
+
+### Phase 6 — MCP tools (`app/mcp/`)
+
+> FR-1; MCP error responses (not HTTP 500s) on tool failure
+
+- [ ] **6.1** `@backend-dev` — Create `app/mcp/tools.py`:
+  - Register MCP server (FastMCP or `mcp[http]`)
+  - `store_memory` tool: accepts `StoreMemoryInput` fields as arguments; resolves `UserContext` from request headers; calls `MemoryService.store`; returns `StoreMemoryOutput` as dict
+  - `search_archive` tool: accepts `query: str`; calls `MemoryService.search_archive`; returns list of row dicts
+  - Both tools catch exceptions and return structured MCP error responses (not raise HTTP errors)
+- [ ] **6.2** `@qa-engineer` — Integration-test both tools against a real `MemoryService` (mocked sync + in-memory repo)
+
+---
+
+### Phase 7 — Middleware / auth (`app/middleware/`)
+
+> CODESTYLE §2 — no `os.getenv`; §4 — type hints; FR-1 and FR-2 auth uniformity
+
+- [ ] **7.1** `@backend-dev` — Create `app/middleware/auth.py`:
+  - `UserContext` dataclass: `api_key: str`, `bucket: str`
+  - `get_user_context(request: Request, dial_client: DialClient = Depends(...)) -> UserContext` — FastAPI dependency; reads `Api-Key` header (raises `HTTPException(401)` if missing); calls `dial_client.resolve_bucket(api_key)`; returns `UserContext`
+  - `Depends` factory helper that calls `injector.get(DialClient)` — bridging Injector → FastAPI
+
+---
+
+### Phase 8 — REST API (`app/api/`)
+
+> FR-2, FR-5; CODESTYLE §4 — return types on all route functions
+
+- [ ] **8.1** `@backend-dev` — Create `app/api/memory_router.py`:
+  - `GET /memory` — list rows; optional `?memory_type=core|episodic` query param; returns `list[MemoryRow]`
+  - `GET /memory/{id}` — single row; `HTTPException(404)` if not found
+  - `DELETE /memory/{id}` — hard delete; `204 No Content`
+  - All routes depend on `UserContext` (from Phase 7) and `MemoryService` (from injector)
+- [ ] **8.2** `@backend-dev` — Create `app/api/retrieve_router.py`:
+  - `GET /memory/retrieve` — accepts `query`, `tier1_limit`, `tier2_limit` query params; returns `RetrieveResponse`
+  - Depends on `UserContext` + `MemoryService`
+- [ ] **8.3** `@backend-dev` — Create `app/api/router.py` — mounts `memory_router` and `retrieve_router`; exposes `create_api_router(injector)` factory that wires the Injector→FastAPI bridge for each router
+- [ ] **8.4** `@qa-engineer` — Integration-test REST routes with `httpx.AsyncClient` + mocked `MemoryService`; cover 200, 404, 204, 401, 503 status codes
+
+---
+
+### Phase 9 — DI wiring (`app/di/`)
+
+> CODESTYLE §1 — one module class per feature; `configure()` only; `@provider` for custom construction
+
+- [ ] **9.1** `@backend-dev` — Create `app/di/app_module.py` → `AppModule(Module)`:
+  - `configure()` installs `DialModule` and `StorageModule`
+  - Binds `MemoryService → MemoryService, scope=singleton`
+  - `@provider` for `FastAPI` app: gets `APIRouter` from `create_api_router(self._injector)`, builds and returns the app with lifespan (logging setup, MCP mount)
+
+---
+
+### Phase 10 — Entry point (`main.py`)
+
+- [ ] **10.1** `@backend-dev` — Rewrite `main.py`:
+  - Call `logging_config.setup()` (Phase 2.2)
+  - Create `Injector([AppModule()])`
+  - Get `FastAPI` app from injector
+  - Start Uvicorn programmatically (host/port from `AppSettings`)
+
+---
+
+### Phase 11 — Observability & hardening
+
+- [ ] **11.1** `@backend-dev` — Add structured JSON log lines in `StorageSync.open()`: log sync-down start/end, sync-up start/end, lock acquisition; include `bucket` field on every line
+- [ ] **11.2** `@backend-dev` — Add `request_id` middleware (UUID per request, injected into `logging.LoggerAdapter` context)
+- [ ] **11.3** `@backend-dev` — Map `StorageSyncError → 503`, `MemoryRow not found → 404`, unhandled exceptions → `500` in a FastAPI exception handler registered in `router.py`
+
+---
+
+### Completion criteria
+
+All boxes checked, `mypy --strict` passes, `ruff check` passes, all `@qa-engineer` tests green.
 
 ---
 
