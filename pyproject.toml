@@ -8,9 +8,41 @@ authors = [
 readme = "README.md"
 requires-python = "^3.14"
 dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "injector",
+    "fastapi-injector",
+    "lancedb",
+    "pydantic-settings",
+    "aidial-client",
+    "python-json-logger",
+    "mcp[cli]",
 ]
+
+
+[tool.poetry.group.dev.dependencies]
+ruff = "*"
+mypy = "*"
+pytest = "*"
+pytest-asyncio = "*"
+httpx = "*"
 
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+
+[tool.ruff]
+target-version = "py314"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
