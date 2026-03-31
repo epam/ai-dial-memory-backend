@@ -20,12 +20,18 @@ def service(settings: AppSettings) -> DialStorageService:
     return DialStorageService(settings)
 
 
-async def test_get_storage_home_calls_my_files_home(service: DialStorageService) -> None:
+async def test_get_storage_home_calls_my_files_home(
+    service: DialStorageService,
+) -> None:
     """_make_client is called with correct api_key; my_files_home result is returned."""
     mock_client = AsyncMock()
     mock_client.my_files_home = AsyncMock(return_value="files/bucket-abc")
 
-    with patch.object(service, "_make_client", return_value=mock_client) as mock_factory:
+    with patch.object(
+        service,
+        "_make_client",
+        return_value=mock_client,
+    ) as mock_factory:
         result = await service.get_storage_home("test-key")
 
     mock_factory.assert_called_once_with("test-key")
@@ -33,7 +39,10 @@ async def test_get_storage_home_calls_my_files_home(service: DialStorageService)
     assert result == "files/bucket-abc"
 
 
-async def test_download_writes_to_local_path(service: DialStorageService, tmp_path: Path) -> None:
+async def test_download_writes_to_local_path(
+    service: DialStorageService,
+    tmp_path: Path,
+) -> None:
     mock_result = AsyncMock()
     mock_client = MagicMock()
     mock_client.files.download.return_value = mock_result
@@ -45,7 +54,10 @@ async def test_download_writes_to_local_path(service: DialStorageService, tmp_pa
     mock_result.awrite_to.assert_called_once_with(str(tmp_path / "out"))
 
 
-async def test_upload_reads_local_file(service: DialStorageService, tmp_path: Path) -> None:
+async def test_upload_reads_local_file(
+    service: DialStorageService,
+    tmp_path: Path,
+) -> None:
     local = tmp_path / "data.bin"
     local.write_bytes(b"hello")
 
@@ -58,3 +70,19 @@ async def test_upload_reads_local_file(service: DialStorageService, tmp_path: Pa
     mock_client.files.upload.assert_called_once()
     call_kwargs = mock_client.files.upload.call_args
     assert call_kwargs.kwargs.get("url") == "files/bucket/memory.lance"
+
+
+@patch("app.dial.dial_storage.AsyncDial")
+def test_make_client_builds_async_dial_with_key_and_base_url(
+    mock_async_dial: MagicMock,
+    settings: AppSettings,
+) -> None:
+    """DialStorageService delegates to AsyncDial with forwarded api_key and dial_url."""
+    mock_async_dial.return_value = MagicMock()
+    service = DialStorageService(settings)
+    client = service._make_client("api-key-xyz")
+    mock_async_dial.assert_called_once_with(
+        api_key="api-key-xyz",
+        base_url="http://dial.test",
+    )
+    assert client is mock_async_dial.return_value
