@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "server",
+  "dolt_database": "ai_dial_memory_mcp",
+  "project_id": "ba277380-79ca-413c-8f82-3bf55772b61f"
+}
