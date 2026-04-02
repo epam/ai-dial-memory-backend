@@ -94,21 +94,22 @@ class StorageSync:
         storage_home = await self._dial.get_storage_home(api_key)
         bucket_id = _bucket_id(storage_home)
         lock = self._lock_for(bucket_id)
+        _log = {"bucket": bucket_id}
         async with lock:
             local_lance = self._settings.tmp_dir / bucket_id / "memory.lance"
-            logger.debug("storage sync-down start bucket_id=%s", bucket_id)
+            logger.debug("sync-down start", extra=_log)
             try:
                 await self._sync_down(api_key, storage_home, local_lance)
             except StorageSyncError:
                 raise
-            logger.debug("storage sync-down end bucket_id=%s", bucket_id)
+            logger.debug("sync-down end", extra=_log)
             try:
                 yield local_lance, bucket_id
             finally:
                 if write:
-                    logger.debug("storage sync-up start bucket_id=%s", bucket_id)
+                    logger.debug("sync-up start", extra=_log)
                     await self._sync_up(api_key, storage_home, local_lance)
-                    logger.debug("storage sync-up end bucket_id=%s", bucket_id)
+                    logger.debug("sync-up end", extra=_log)
 
 
 def _is_not_found(exc: BaseException) -> bool:
