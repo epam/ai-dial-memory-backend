@@ -2,17 +2,19 @@
 from __future__ import annotations
 
 import datetime
+import json
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from injector import Injector, Module, provider, singleton
 
+from app.api.router import create_api_router
 from app.dial.dial_storage import DialStorageService
 from app.models.memory import MemoryRow, RetrieveResponse
 from app.services.memory_service import MemoryService, RowNotFoundError
 from app.storage.sync import StorageSyncError
-from app.api.router import create_api_router
 
 
 def _row(id: str = "r1") -> MemoryRow:
@@ -27,7 +29,7 @@ def _row(id: str = "r1") -> MemoryRow:
     )
 
 
-def _make_app(svc: MagicMock, dial: MagicMock) -> FastAPI:
+def _make_app(svc: MagicMock, dial: MagicMock) -> FastAPI:  # type: ignore[misc]
     class TestModule(Module):
         @provider
         @singleton
@@ -150,3 +152,49 @@ async def test_storage_sync_error_returns_503_with_message() -> None:
         r = await c.get("/memory", headers={"Api-Key": "k"})
     assert r.status_code == 503
     assert "message" in r.json()
+
+
+# ---------------------------------------------------------------------------
+# Application properties — retrieve uses config values
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_retrieve_uses_tier_limits_from_app_properties() -> None:
+    svc = MagicMock()
+    svc.retrieve = AsyncMock(return_value=RetrieveResponse(facts=[]))
+    props = json.dumps({"tier1_limit": 3, "tier2_limit": 7})
+    async with AsyncClient(
+        transport=ASGITransport(app=_make_app(svc, _dial())), base_url="http://test"
+    ) as c:
+        r = await c.get(
+            "/memory/retrieve?query=hello",
+            headers={"Api-Key": "k", "X-Dial-Application-Properties": props},
+        )
+    assert r.status_code == 200
+    svc.retrieve.assert_awaited_once_with("k", "hello", 3, 7)
+
+
+@pytest.mark.asyncio
+async def test_retrieve_uses_default_limits_when_no_app_properties() -> None:
+    svc = MagicMock()
+    svc.retrieve = AsyncMock(return_value=RetrieveResponse(facts=[]))
+    async with AsyncClient(
+        transport=ASGITransport(app=_make_app(svc, _dial())), base_url="http://test"
+    ) as c:
+        r = await c.get("/memory/retrieve?query=hello", headers={"Api-Key": "k"})
+    assert r.status_code == 200
+    svc.retrieve.assert_awaited_once_with("k", "hello", 5, 10)
+
+
+@pytest.mark.asyncio
+async def test_retrieve_returns_422_for_invalid_app_properties() -> None:
+    svc = MagicMock()
+    async with AsyncClient(
+        transport=ASGITransport(app=_make_app(svc, _dial())), base_url="http://test"
+    ) as c:
+        r = await c.get(
+            "/memory/retrieve?query=hello",
+            headers={"Api-Key": "k", "X-Dial-Application-Properties": "not-json"},
+        )
+    assert r.status_code == 422

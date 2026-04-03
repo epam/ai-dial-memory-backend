@@ -5,14 +5,14 @@ import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from httpx import ASGITransport, AsyncClient
 
+from app.config.application import MemoryAppConfig
 from app.models.memory import MemoryRow, RetrieveResponse
 from app.services.memory_service import RowNotFoundError
 from app.storage.sync import StorageSyncError
-from fastapi import Request
-from fastapi.responses import JSONResponse
 
 
 def _row(id: str = "r1") -> MemoryRow:
@@ -31,6 +31,7 @@ def _make_app(svc: MagicMock) -> FastAPI:
     """Build a minimal FastAPI app with real routers and a mocked MemoryService."""
     from app.api.memory_router import make_memory_router
     from app.api.retrieve_router import make_retrieve_router
+    from app.middleware.app_config import get_app_config
     from app.middleware.auth import UserContext
 
     app = FastAPI()
@@ -44,12 +45,14 @@ def _make_app(svc: MagicMock) -> FastAPI:
         except StorageSyncError as exc:
             return JSONResponse(status_code=503, content={"message": str(exc)})
 
-    # Override the get_user_context dependency to avoid real DIAL calls
     async def _fake_user_context() -> UserContext:
         return UserContext(api_key="test-key", bucket="test-bucket")
 
+    async def _app_config_dep(request: Request) -> MemoryAppConfig:
+        return await get_app_config(request)
+
     memory_router = make_memory_router(svc, _fake_user_context)
-    retrieve_router = make_retrieve_router(svc, _fake_user_context)
+    retrieve_router = make_retrieve_router(svc, _fake_user_context, _app_config_dep)
 
     # retrieve_router first: /memory/retrieve must not be shadowed by /memory/{row_id}
     app.include_router(retrieve_router)
@@ -140,9 +143,15 @@ async def test_retrieve_returns_200_with_facts() -> None:
 
 
 @pytest.mark.asyncio
-async def test_retrieve_passes_tier_limits() -> None:
+async def test_retrieve_passes_tier_limits_from_app_properties() -> None:
+    import json
+
     svc = MagicMock()
     svc.retrieve = AsyncMock(return_value=RetrieveResponse(facts=[]))
+    props = json.dumps({"tier1_limit": 3, "tier2_limit": 7})
     async with AsyncClient(transport=ASGITransport(app=_make_app(svc)), base_url="http://test") as c:
-        await c.get("/memory/retrieve?query=hi&tier1_limit=3&tier2_limit=7", headers={"Api-Key": "k"})
+        await c.get(
+            "/memory/retrieve?query=hi",
+            headers={"Api-Key": "k", "X-Dial-Application-Properties": props},
+        )
     svc.retrieve.assert_awaited_once_with("test-key", "hi", 3, 7)

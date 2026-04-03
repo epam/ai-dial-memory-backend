@@ -6,9 +6,12 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from injector import Injector
 
+from app.api.configuration_support_router import make_configuration_support_router
 from app.api.memory_router import make_memory_router
 from app.api.retrieve_router import make_retrieve_router
+from app.config.application import MemoryAppConfig
 from app.dial.dial_storage import DialStorageService
+from app.middleware.app_config import get_app_config
 from app.middleware.auth import UserContext, get_user_context
 from app.services.memory_service import MemoryService, RowNotFoundError
 from app.storage.sync import StorageSyncError
@@ -20,6 +23,9 @@ def create_api_router(injector: Injector) -> FastAPI:
 
     async def _user_context_dep(request: Request) -> UserContext:
         return await get_user_context(request, dial)
+
+    async def _app_config_dep(request: Request) -> MemoryAppConfig:
+        return await get_app_config(request)
 
     app = FastAPI()
 
@@ -34,7 +40,8 @@ def create_api_router(injector: Injector) -> FastAPI:
         except Exception:
             return JSONResponse(status_code=500, content={"message": "Internal server error"})
 
+    app.include_router(make_configuration_support_router())
     # retrieve_router first: /memory/retrieve must not be shadowed by /memory/{row_id}
-    app.include_router(make_retrieve_router(service, _user_context_dep))
+    app.include_router(make_retrieve_router(service, _user_context_dep, _app_config_dep))
     app.include_router(make_memory_router(service, _user_context_dep))
     return app

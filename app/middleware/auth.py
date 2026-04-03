@@ -1,15 +1,13 @@
 """Authentication middleware — UserContext and get_user_context FastAPI dependency."""
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from fastapi import HTTPException, Request
+from pydantic import BaseModel
 
 from app.dial.dial_storage import DialStorageService
 
 
-@dataclass
-class UserContext:
+class UserContext(BaseModel):
     api_key: str
     bucket: str
 

@@ -27,13 +27,13 @@ class MemoryService:
         self._sync = sync
         self._repo = repo
 
-    async def store(self, api_key: str, input: StoreMemoryInput) -> StoreMemoryOutput:
+    async def store(self, api_key: str, memory_input: StoreMemoryInput) -> StoreMemoryOutput:
         row = MemoryRow(
             id=str(uuid.uuid4()),
-            memory_type=input.memory_type,
-            content=input.content,
-            context=input.context,
-            importance=input.importance,
+            memory_type=memory_input.memory_type,
+            content=memory_input.content,
+            context=memory_input.context,
+            importance=memory_input.importance,
             timestamp=datetime.datetime.now(tz=datetime.timezone.utc),
             access_count=0,
         )
