@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from abc import ABC, abstractmethod
 from pathlib import Path
 
 import lancedb
@@ -10,6 +9,7 @@ from injector import inject
 
 from src.app.config.app_settings import AppSettings
 from src.app.models.memory import MemoryRow, MemoryType
+from src.app.storage.common.repository import MemoryRepository
 
 logger = logging.getLogger(__name__)
 
@@ -24,26 +24,6 @@ MEMORY_SCHEMA = pa.schema([
     pa.field("timestamp",       pa.timestamp("us"),     nullable=False),
     pa.field("access_count",    pa.int32(),             nullable=False),
 ])
-
-
-class MemoryRepository(ABC):
-    @abstractmethod
-    def append(self, bucket: str, row: MemoryRow) -> None: ...
-
-    @abstractmethod
-    def get(self, bucket: str, row_id: str) -> MemoryRow | None: ...
-
-    @abstractmethod
-    def list_rows(self, bucket: str, memory_type: MemoryType | None = None) -> list[MemoryRow]: ...
-
-    @abstractmethod
-    def delete(self, bucket: str, row_id: str) -> None: ...
-
-    @abstractmethod
-    def fts_search(self, bucket: str, query: str, memory_type: MemoryType, limit: int) -> list[MemoryRow]: ...
-
-    @abstractmethod
-    def top_by_importance(self, bucket: str, memory_type: MemoryType, limit: int) -> list[MemoryRow]: ...
 
 
 @inject

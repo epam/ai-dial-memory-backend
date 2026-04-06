@@ -15,7 +15,7 @@ from src.app.models.memory import (
 )
 from src.app.storage.common.errors import RowNotFoundError
 from src.app.storage.common.memory_service import AbstractMemoryService
-from src.app.storage.lance.repository import MemoryRepository
+from src.app.storage.common.repository import MemoryRepository
 from src.app.storage.lance.sync import StorageSync
 
 
