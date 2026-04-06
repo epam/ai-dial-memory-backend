@@ -11,7 +11,7 @@ import pytest
 from pythonjsonlogger.json import JsonFormatter
 
 from src.app.config.app_settings import AppSettings
-from src.app.storage.sync import StorageSync
+from src.app.storage.lance.sync import StorageSync
 
 
 def _capture_logs() -> tuple[logging.Logger, StringIO]:
@@ -19,7 +19,7 @@ def _capture_logs() -> tuple[logging.Logger, StringIO]:
     buf = StringIO()
     handler = logging.StreamHandler(buf)
     handler.setFormatter(JsonFormatter("%(name)s %(levelname)s %(message)s"))
-    logger = logging.getLogger("src.app.storage.sync")
+    logger = logging.getLogger("src.app.storage.lance.sync")
     logger.addHandler(handler)
     logger.setLevel(logging.DEBUG)
     return logger, buf

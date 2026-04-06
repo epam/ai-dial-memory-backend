@@ -10,7 +10,7 @@ import pytest
 
 from src.app.config.app_settings import AppSettings
 from src.app.dial.dial_storage import DialStorageError
-from src.app.storage.sync import StorageSync
+from src.app.storage.lance.sync import StorageSync
 
 
 @pytest.fixture
