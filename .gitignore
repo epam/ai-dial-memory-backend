@@ -5,6 +5,11 @@ __pycache__/
 
 # IDE
 .idea/
+.cursor/
+.codemie/
+
+# Superpowers plans (local dev tooling)
+docs/superpowers/
 
 # Beads / Dolt files (added by bd init)
 .dolt/
