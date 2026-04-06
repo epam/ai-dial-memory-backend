@@ -10,6 +10,7 @@ import pytest
 
 from src.app.models.memory import MemoryRow, StoreMemoryInput
 from src.app.services.memory_service import MemoryService, RowNotFoundError
+from src.app.storage.common.memory_service import AbstractMemoryService
 
 
 # ---------------------------------------------------------------------------
@@ -185,3 +186,12 @@ async def test_delete_row_raises_when_not_found() -> None:
 
     with pytest.raises(RowNotFoundError):
         await svc.delete_row("key", "missing-id")
+
+
+def test_abstract_memory_service_is_abstract() -> None:
+    import inspect
+    assert inspect.isabstract(AbstractMemoryService)
+    abstract_methods = {
+        "store", "search_archive", "retrieve", "list_rows", "get_row", "delete_row"
+    }
+    assert AbstractMemoryService.__abstractmethods__ == abstract_methods
