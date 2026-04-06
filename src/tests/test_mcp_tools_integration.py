@@ -4,7 +4,7 @@ from __future__ import annotations
 import datetime
 from contextlib import asynccontextmanager
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -48,6 +48,17 @@ class InMemoryRepository(MemoryRepository):
         return sorted(rows, key=lambda r: r.importance, reverse=True)[:limit]
 
 
+def _make_context(api_key: str = "key") -> MagicMock:
+    """Build a mock FastMCP Context with Api-Key header."""
+    request = MagicMock()
+    request.headers = {"Api-Key": api_key}
+    req_ctx = MagicMock()
+    req_ctx.request = request
+    ctx = MagicMock()
+    ctx.request_context = req_ctx
+    return ctx
+
+
 def _make_sync() -> MagicMock:
     sync = MagicMock()
 
@@ -69,16 +80,16 @@ async def test_store_memory_tool_persists_row_and_returns_id() -> None:
     svc = MemoryService(_make_sync(), repo)
     mcp = create_mcp_server(svc)
 
-    result = await mcp.call_tool(
-        "store_memory",
-        {
-            "api_key": "key",
-            "content": "I prefer dark mode",
-            "memory_type": "core",
-            "context": "UI chat",
-            "importance": 0.9,
-        },
-    )
+    with patch.object(mcp, "get_context", return_value=_make_context("key")):
+        result = await mcp.call_tool(
+            "store_memory",
+            {
+                "content": "I prefer dark mode",
+                "memory_type": "core",
+                "context": "UI chat",
+                "importance": 0.9,
+            },
+        )
 
     # Row was stored
     assert len(repo._rows) == 1
@@ -114,7 +125,8 @@ async def test_search_archive_tool_returns_matching_episodic_rows() -> None:
     svc = MemoryService(_make_sync(), repo)
     mcp = create_mcp_server(svc)
 
-    result = await mcp.call_tool("search_archive", {"api_key": "key", "query": "hiking"})
+    with patch.object(mcp, "get_context", return_value=_make_context("key")):
+        result = await mcp.call_tool("search_archive", {"query": "hiking"})
 
     assert result is not None
     # The result content should reference the hiking row
