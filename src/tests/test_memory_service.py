@@ -9,8 +9,9 @@ from unittest.mock import MagicMock
 import pytest
 
 from src.app.models.memory import MemoryRow, StoreMemoryInput
-from src.app.services.memory_service import MemoryService, RowNotFoundError
+from src.app.storage.common.errors import RowNotFoundError
 from src.app.storage.common.memory_service import AbstractMemoryService
+from src.app.storage.lance.memory_service import MemoryService
 
 
 # ---------------------------------------------------------------------------
@@ -195,3 +196,7 @@ def test_abstract_memory_service_is_abstract() -> None:
         "store", "search_archive", "retrieve", "list_rows", "get_row", "delete_row"
     }
     assert AbstractMemoryService.__abstractmethods__ == abstract_methods
+
+
+def test_memory_service_implements_abstract_interface() -> None:
+    assert issubclass(MemoryService, AbstractMemoryService)
