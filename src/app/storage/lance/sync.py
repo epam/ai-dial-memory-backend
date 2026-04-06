@@ -28,10 +28,10 @@ def _bucket_id(storage_home: str) -> str:
 class StorageSync:
     def __init__(
         self,
-        dial: DialStorageService,
+        dial_storage_service: DialStorageService,
         settings: AppSettings,
     ) -> None:
-        self._dial = dial
+        self._dial = dial_storage_service
         self._settings = settings
         self._locks: dict[str, asyncio.Lock] = {}
 

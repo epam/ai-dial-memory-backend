@@ -19,10 +19,10 @@ from src.app.storage.common.memory_service import AbstractMemoryService
 
 def create_api_router(injector: Injector) -> FastAPI:
     service = injector.get(AbstractMemoryService)
-    dial = injector.get(DialStorageService)
+    dial_storage_service = injector.get(DialStorageService)
 
     async def _user_context_dep(request: Request) -> UserContext:
-        return await get_user_context(request, dial)
+        return await get_user_context(request, dial_storage_service)
 
     async def _app_config_dep(request: Request) -> MemoryAppConfig:
         return await get_app_config(request)
