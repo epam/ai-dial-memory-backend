@@ -1,0 +1,28 @@
+name: Schema drift check
+
+on:
+  pull_request:
+  push:
+    branches: [main, development]
+
+jobs:
+  schema-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: poetry install --no-root
+
+      - name: Check schema is up to date
+        run: |
+          ENABLE_PREVIEW_FEATURES=true poetry run python scripts/dump_app_schema.py \
+            docs/generated-app-schema.json --check

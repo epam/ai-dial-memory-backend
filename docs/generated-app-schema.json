@@ -1,0 +1,30 @@
+{
+  "properties": {
+    "tier1_limit": {
+      "default": 5,
+      "description": "Number of top-importance core memories to include in retrieval.",
+      "title": "Tier1 Limit",
+      "type": "integer",
+      "dial:meta": {
+        "dial:propertyKind": "client",
+        "dial:propertyOrder": 0
+      }
+    },
+    "tier2_limit": {
+      "default": 10,
+      "description": "Number of episodic memories to include via full-text search.",
+      "title": "Tier2 Limit",
+      "type": "integer",
+      "dial:meta": {
+        "dial:propertyKind": "client",
+        "dial:propertyOrder": 1
+      }
+    }
+  },
+  "title": "MemoryAppConfig",
+  "type": "object",
+  "$id": "ai-dial-memory-mcp",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "dial:applicationTypeDisplayName": "AI DIAL Memory",
+  "dial:appendApplicationPropertiesHeader": true
+}
