@@ -4,10 +4,10 @@ from __future__ import annotations
 from mcp.server.fastmcp import FastMCP
 
 from src.app.models.memory import MemoryType, StoreMemoryInput
-from src.app.services.memory_service import MemoryService
+from src.app.storage.common.memory_service import AbstractMemoryService
 
 
-def create_mcp_server(service: MemoryService) -> FastMCP:
+def create_mcp_server(service: AbstractMemoryService) -> FastMCP:
     mcp: FastMCP = FastMCP("ai-dial-memory")
 
     @mcp.tool()

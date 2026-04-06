@@ -9,8 +9,8 @@ from injector import Injector, Module, provider, singleton
 
 from src.app.api.router import create_api_router
 from src.app.dial.dial_storage import DialStorageService
-from src.app.services.memory_service import MemoryService, RowNotFoundError
-from src.app.storage.sync import StorageSyncError
+from src.app.storage.common.errors import RowNotFoundError, StorageSyncError
+from src.app.storage.common.memory_service import AbstractMemoryService
 
 
 def _make_app(svc: MagicMock) -> object:
@@ -20,7 +20,7 @@ def _make_app(svc: MagicMock) -> object:
     class TestModule(Module):
         @provider
         @singleton
-        def provide_svc(self) -> MemoryService:
+        def provide_svc(self) -> AbstractMemoryService:
             return svc  # type: ignore[return-value]
 
         @provider

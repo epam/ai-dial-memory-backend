@@ -11,7 +11,7 @@ from injector import Injector, Module, provider, singleton
 from src.app.api.router import create_api_router
 from src.app.dial.dial_storage import DialStorageService
 from src.app.models.memory import MemoryRow, RetrieveResponse
-from src.app.services.memory_service import MemoryService
+from src.app.storage.common.memory_service import AbstractMemoryService
 
 
 def _row() -> MemoryRow:
@@ -30,7 +30,7 @@ def _make_injector(svc: MagicMock, dial: MagicMock) -> Injector:
     class TestModule(Module):
         @provider
         @singleton
-        def provide_service(self) -> MemoryService:
+        def provide_service(self) -> AbstractMemoryService:
             return svc  # type: ignore[return-value]
 
         @provider

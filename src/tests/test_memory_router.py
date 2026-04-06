@@ -11,8 +11,7 @@ from httpx import ASGITransport, AsyncClient
 
 from src.app.config.application import MemoryAppConfig
 from src.app.models.memory import MemoryRow, RetrieveResponse
-from src.app.services.memory_service import RowNotFoundError
-from src.app.storage.sync import StorageSyncError
+from src.app.storage.common.errors import RowNotFoundError, StorageSyncError
 
 
 def _row(id: str = "r1") -> MemoryRow:

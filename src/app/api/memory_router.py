@@ -8,11 +8,11 @@ from fastapi.responses import Response
 
 from src.app.middleware.auth import UserContext
 from src.app.models.memory import MemoryRow, MemoryType
-from src.app.services.memory_service import MemoryService
+from src.app.storage.common.memory_service import AbstractMemoryService
 
 
 def make_memory_router(
-    service: MemoryService,
+    service: AbstractMemoryService,
     user_context_dep: Callable,
 ) -> APIRouter:
     router = APIRouter()

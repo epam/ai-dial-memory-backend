@@ -8,11 +8,11 @@ from fastapi import APIRouter, Depends, Query
 from src.app.config.application import MemoryAppConfig
 from src.app.middleware.auth import UserContext
 from src.app.models.memory import RetrieveResponse
-from src.app.services.memory_service import MemoryService
+from src.app.storage.common.memory_service import AbstractMemoryService
 
 
 def make_retrieve_router(
-    service: MemoryService,
+    service: AbstractMemoryService,
     user_context_dep: Callable,
     app_config_dep: Callable,
 ) -> APIRouter:
