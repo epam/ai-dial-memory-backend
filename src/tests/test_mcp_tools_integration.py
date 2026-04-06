@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from src.app.models.memory import MemoryRow, MemoryType
-from src.app.storage.repository import MemoryRepository
+from src.app.storage.lance.repository import MemoryRepository
 from src.app.services.memory_service import MemoryService
 from src.app.mcp.tools import create_mcp_server
 

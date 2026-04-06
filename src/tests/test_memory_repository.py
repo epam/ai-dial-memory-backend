@@ -9,7 +9,7 @@ import pytest
 
 from src.app.config.app_settings import AppSettings
 from src.app.models.memory import MemoryRow
-from src.app.storage.repository import LanceDbMemoryRepository
+from src.app.storage.lance.repository import LanceDbMemoryRepository
 
 
 def _row_dict(rid: str = "rid-1", importance: float = 0.5) -> dict:
@@ -64,7 +64,7 @@ def test_append_creates_table_and_adds_row(settings: AppSettings) -> None:
     db.table_names.return_value = []
     db.create_table.return_value = table
 
-    with patch("src.app.storage.repository.lancedb.connect", return_value=db):
+    with patch("src.app.storage.lance.repository.lancedb.connect", return_value=db):
         repo = LanceDbMemoryRepository(settings)
         row = MemoryRow.model_validate(_row_dict())
         repo.append("bucket-a", row)
@@ -84,7 +84,7 @@ def test_list_rows_applies_memory_type_filter(settings: AppSettings) -> None:
     chain = _query_chain(_fake_df(records))
     table.search.return_value = chain
 
-    with patch("src.app.storage.repository.lancedb.connect", return_value=db):
+    with patch("src.app.storage.lance.repository.lancedb.connect", return_value=db):
         repo = LanceDbMemoryRepository(settings)
         out = repo.list_rows("bucket-a", memory_type="core")
 
@@ -99,7 +99,7 @@ def test_delete_calls_table_delete(settings: AppSettings) -> None:
     db.open_table.return_value = table
     table.search.return_value = _query_chain(_fake_df([]))
 
-    with patch("src.app.storage.repository.lancedb.connect", return_value=db):
+    with patch("src.app.storage.lance.repository.lancedb.connect", return_value=db):
         repo = LanceDbMemoryRepository(settings)
         repo.delete("bucket-a", "x-1")
 
@@ -115,7 +115,7 @@ def test_get_returns_none_when_empty(settings: AppSettings) -> None:
     df.empty = True
     table.search.return_value = _query_chain(df)
 
-    with patch("src.app.storage.repository.lancedb.connect", return_value=db):
+    with patch("src.app.storage.lance.repository.lancedb.connect", return_value=db):
         repo = LanceDbMemoryRepository(settings)
         assert repo.get("bucket-a", "missing") is None
 
@@ -129,7 +129,7 @@ def test_fts_search_uses_query_type_fts(settings: AppSettings) -> None:
     chain = _query_chain(_fake_df([rec]))
     table.search.return_value = chain
 
-    with patch("src.app.storage.repository.lancedb.connect", return_value=db):
+    with patch("src.app.storage.lance.repository.lancedb.connect", return_value=db):
         repo = LanceDbMemoryRepository(settings)
         out = repo.fts_search("b", "needle", "core", limit=5)
 
@@ -151,7 +151,7 @@ def test_top_by_importance_sorts_descending(settings: AppSettings) -> None:
     df = _fake_df([r_low, r_high])
     table.search.return_value = _query_chain(df)
 
-    with patch("src.app.storage.repository.lancedb.connect", return_value=db):
+    with patch("src.app.storage.lance.repository.lancedb.connect", return_value=db):
         repo = LanceDbMemoryRepository(settings)
         out = repo.top_by_importance("b", "core", limit=10)
 
