@@ -26,7 +26,7 @@ class DialStorageService:
     async def get_storage_home(self, api_key: str) -> str:
         client = self._make_client(api_key)
         try:
-            return await client.my_files_home()
+            return str(await client.my_files_home())
         except Exception as exc:
             raise DialStorageError(f"Failed to resolve storage home: {exc}") from exc
 
