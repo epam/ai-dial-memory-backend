@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 from src.app.models.memory import MemoryType, StoreMemoryInput
 from src.app.storage.common.memory_service import AbstractMemoryService
@@ -13,7 +14,11 @@ def _get_api_key(ctx: Context) -> str | None:
 
 
 def create_mcp_server(service: AbstractMemoryService) -> FastMCP:
-    mcp: FastMCP = FastMCP("ai-dial-memory")
+    mcp: FastMCP = FastMCP(
+        "ai-dial-memory",
+        streamable_http_path="/",
+        transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
+    )
 
     @mcp.tool()
     async def store_memory(

@@ -2,6 +2,10 @@
 and an Injector → FastAPI DI bridge."""
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from typing import Any
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from injector import Injector
@@ -17,7 +21,7 @@ from src.app.storage.common.errors import RowNotFoundError, StorageSyncError
 from src.app.storage.common.memory_service import AbstractMemoryService
 
 
-def create_api_router(injector: Injector) -> FastAPI:
+def create_api_router(injector: Injector, lifespan: Any = None) -> FastAPI:
     service = injector.get(AbstractMemoryService)
     dial_storage_service = injector.get(DialStorageService)
 
@@ -27,7 +31,7 @@ def create_api_router(injector: Injector) -> FastAPI:
     async def _app_config_dep(request: Request) -> MemoryAppConfig:
         return await get_app_config(request)
 
-    app = FastAPI()
+    app = FastAPI(lifespan=lifespan)
 
     @app.middleware("http")
     async def _exception_handler(request: Request, call_next):  # noqa: ANN001
