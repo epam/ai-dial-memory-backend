@@ -17,6 +17,7 @@ dependencies = [
     "aidial-client",
     "python-json-logger",
     "mcp[cli]",
+    "pandas",
 ]
 
 
