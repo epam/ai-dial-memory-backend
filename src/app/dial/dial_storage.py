@@ -33,7 +33,7 @@ class DialStorageService:
     async def download(self, api_key: str, remote_url: str, local_path: Path) -> None:
         client = self._make_client(api_key)
         try:
-            result = client.files.download(url=remote_url)
+            result = await client.files.download(url=remote_url)
             await result.awrite_to(str(local_path))
         except Exception as exc:
             raise DialStorageError(f"Download failed {remote_url}: {exc}") from exc
