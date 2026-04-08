@@ -36,13 +36,19 @@ class LanceDbMemoryRepository(MemoryRepository):
 
     def _open_table(self, bucket: str) -> lancedb.table.LanceTable:
         db_path = self._table_path(bucket)
-        db_path.mkdir(parents=True, exist_ok=True)
+        # Only ensure the parent exists — do NOT pre-create memory.lance/ itself.
+        # Pre-creating it as an empty dir would make LanceDB see a corrupt table.
+        db_path.parent.mkdir(parents=True, exist_ok=True)
         db = lancedb.connect(str(db_path.parent))
         table_name = "memory"
-        if table_name not in db.table_names():
+        known = db.table_names()
+        logger.debug("_open_table: db_path=%s tables=%s", db_path, known)
+        if table_name not in known:
+            logger.info("_open_table: table %r not found — creating fresh", table_name)
             table = db.create_table(table_name, schema=MEMORY_SCHEMA)
             table.create_fts_index("content", replace=True)
             return table
+        logger.info("_open_table: opening existing table %r", table_name)
         table = db.open_table(table_name)
         return table
 

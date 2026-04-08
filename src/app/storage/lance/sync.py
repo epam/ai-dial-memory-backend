@@ -57,13 +57,27 @@ class StorageSync:
             shutil.rmtree(local_lance)
         tar_path = local_lance.parent / "memory.tar.gz"
         try:
+            logger.info("sync-down: downloading %s", remote)
             await self._dial.download(api_key, remote, tar_path)
+            size_kb = tar_path.stat().st_size / 1024
+            logger.info("sync-down: extracting %.1f KB → %s", size_kb, local_lance)
             with tarfile.open(tar_path, "r:gz") as tar:
                 tar.extractall(local_lance.parent, filter="data")
+            # Guard: if the extracted dir has no Lance structure (e.g. was an empty
+            # placeholder), treat it as a fresh start so LanceDB can init cleanly.
+            if local_lance.exists() and not any(local_lance.iterdir()):
+                logger.warning(
+                    "sync-down: extracted memory.lance is empty — removing to force fresh init"
+                )
+                shutil.rmtree(local_lance)
+            logger.info("sync-down: done")
         except DialStorageError as exc:
             if _is_not_found(exc):
-                logger.info("No remote memory dataset at %s; starting fresh", remote)
-                local_lance.mkdir(parents=True, exist_ok=True)
+                logger.info("sync-down: no remote dataset found, starting fresh")
+                # Only ensure the parent exists — LanceDB will create memory.lance/
+                # itself via create_table. Pre-creating it as empty would make
+                # LanceDB think a corrupt table already exists.
+                local_lance.parent.mkdir(parents=True, exist_ok=True)
             else:
                 raise StorageSyncError(f"sync-down failed: {exc}") from exc
         finally:
@@ -80,9 +94,13 @@ class StorageSync:
         remote = self._remote_memory_prefix(storage_home)
         tar_path = local_lance.parent / "memory.tar.gz"
         try:
+            logger.info("sync-up: packing %s", local_lance)
             with tarfile.open(tar_path, "w:gz") as tar:
                 tar.add(local_lance, arcname=local_lance.name)
+            size_kb = tar_path.stat().st_size / 1024
+            logger.info("sync-up: uploading %.1f KB → %s", size_kb, remote)
             await self._dial.upload(api_key, tar_path, remote)
+            logger.info("sync-up: done")
         except DialStorageError as exc:
             raise StorageSyncError(f"sync-up failed: {exc}") from exc
         finally:
@@ -102,23 +120,22 @@ class StorageSync:
         """
         storage_home = await self._dial.get_storage_home(api_key)
         bucket_id = _bucket_id(storage_home)
+        short_bucket = bucket_id[:8]
         lock = self._lock_for(bucket_id)
-        _log = {"bucket": bucket_id}
+        mode = "write" if write else "read"
+        logger.info("storage open [%s] bucket=%s storage_home=%s", mode, short_bucket, storage_home)
         async with lock:
             local_lance = self._settings.tmp_dir / bucket_id / "memory.lance"
-            logger.debug("sync-down start", extra=_log)
             try:
                 await self._sync_down(api_key, storage_home, local_lance)
             except StorageSyncError:
                 raise
-            logger.debug("sync-down end", extra=_log)
             try:
                 yield local_lance, bucket_id
             finally:
                 if write:
-                    logger.debug("sync-up start", extra=_log)
                     await self._sync_up(api_key, storage_home, local_lance)
-                    logger.debug("sync-up end", extra=_log)
+        logger.info("storage close [%s] bucket=%s", mode, short_bucket)
 
 
 def _is_not_found(exc: BaseException) -> bool:
