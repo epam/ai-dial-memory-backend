@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from pathlib import Path
 
 import lancedb
@@ -53,7 +54,12 @@ class LanceDbMemoryRepository(MemoryRepository):
         return table
 
     def _row_to_model(self, record: dict) -> MemoryRow:
-        return MemoryRow.model_validate(record)
+        # pandas represents NULL as float nan for non-numeric columns; normalise to None.
+        clean = {
+            k: (None if isinstance(v, float) and math.isnan(v) else v)
+            for k, v in record.items()
+        }
+        return MemoryRow.model_validate(clean)
 
     def append(self, bucket: str, row: MemoryRow) -> None:
         table = self._open_table(bucket)
