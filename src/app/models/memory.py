@@ -33,7 +33,7 @@ class StoreMemoryOutput(BaseModel):
 
 
 class RetrieveRequest(BaseModel):
-    query: str
+    app_name: str | None = None
     tier1_limit: int = 5
     tier2_limit: int = 10
 
