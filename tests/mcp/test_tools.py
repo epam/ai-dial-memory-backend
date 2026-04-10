@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.app.models.memory import MemoryRow, RetrieveResponse
 from src.app.mcp.tools import create_mcp_server
+from src.app.models.memory import MemoryRow, RetrieveResponse
 
 
 def _make_row(row_id: str) -> MemoryRow:
@@ -37,7 +37,11 @@ async def test_prime_memories_returns_facts() -> None:
     mcp = create_mcp_server(service)
 
     # Access the tool function directly
-    tool_fn = next(t for t in mcp._tool_manager._tools.values() if t.name == "prime_memories")
+    tool_fn = next(
+        (t for t in mcp._tool_manager._tools.values() if t.name == "prime_memories"),
+        None,
+    )
+    assert tool_fn is not None, "prime_memories tool not registered"
     ctx = _make_context("test-key")
     result = await tool_fn.fn(app_name="my-app", ctx=ctx)
 
@@ -51,7 +55,11 @@ async def test_prime_memories_missing_api_key_returns_error() -> None:
     service = MagicMock()
     mcp = create_mcp_server(service)
 
-    tool_fn = next(t for t in mcp._tool_manager._tools.values() if t.name == "prime_memories")
+    tool_fn = next(
+        (t for t in mcp._tool_manager._tools.values() if t.name == "prime_memories"),
+        None,
+    )
+    assert tool_fn is not None, "prime_memories tool not registered"
     ctx = _make_context(None)
     result = await tool_fn.fn(app_name="my-app", ctx=ctx)
 
@@ -65,7 +73,11 @@ async def test_prime_memories_none_app_name_passes_through() -> None:
     service.retrieve = AsyncMock(return_value=RetrieveResponse(facts=[]))
     mcp = create_mcp_server(service)
 
-    tool_fn = next(t for t in mcp._tool_manager._tools.values() if t.name == "prime_memories")
+    tool_fn = next(
+        (t for t in mcp._tool_manager._tools.values() if t.name == "prime_memories"),
+        None,
+    )
+    assert tool_fn is not None, "prime_memories tool not registered"
     ctx = _make_context("test-key")
     await tool_fn.fn(app_name=None, ctx=ctx)
 

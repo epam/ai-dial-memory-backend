@@ -63,8 +63,9 @@ def create_mcp_server(service: AbstractMemoryService) -> FastMCP:
         app_name: str | None,
         ctx: Context,
     ) -> list[dict]:
-        """Return top core memories plus episodic memories scoped to the given app/deployment name.
-        Designed as a synthetic tool call — inject at the start of every dialogue."""
+        """Return top core memories plus episodic memories scoped to the given
+        app/deployment name. Designed as a synthetic tool call — inject at the
+        start of every dialogue."""
         api_key = _get_api_key(ctx)
         if not api_key:
             return [{"error": "Api-Key header missing", "status": 401}]
