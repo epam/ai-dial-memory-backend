@@ -9,7 +9,7 @@ from src.app.dial.dial_storage import DialStorageService
 
 class UserContext(BaseModel):
     api_key: str
-    bucket: str
+    bucket: str = ""
 
 
 async def get_user_context(request: Request, dial_storage_service: DialStorageService) -> UserContext:

@@ -136,7 +136,7 @@ async def test_retrieve_returns_200_with_facts() -> None:
     svc = MagicMock()
     svc.retrieve = AsyncMock(return_value=RetrieveResponse(facts=[_row()]))
     async with AsyncClient(transport=ASGITransport(app=_make_app(svc)), base_url="http://test") as c:
-        r = await c.get("/memory/retrieve?query=hello", headers={"Api-Key": "k"})
+        r = await c.get("/memory/retrieve?app_name=my-app", headers={"Api-Key": "k"})
     assert r.status_code == 200
     assert r.json()["facts"][0]["id"] == "r1"
 
@@ -150,7 +150,7 @@ async def test_retrieve_passes_tier_limits_from_app_properties() -> None:
     props = json.dumps({"tier1_limit": 3, "tier2_limit": 7})
     async with AsyncClient(transport=ASGITransport(app=_make_app(svc)), base_url="http://test") as c:
         await c.get(
-            "/memory/retrieve?query=hi",
+            "/memory/retrieve?app_name=my-app",
             headers={"Api-Key": "k", "X-Dial-Application-Properties": props},
         )
-    svc.retrieve.assert_awaited_once_with("test-key", "hi", 3, 7)
+    svc.retrieve.assert_awaited_once_with("test-key", "my-app", 3, 7)

@@ -20,12 +20,12 @@ def make_retrieve_router(
 
     @router.get("/memory/retrieve", response_model=RetrieveResponse)
     async def retrieve_memory(
-        query: str = Query(...),
+        app_name: str | None = Query(default=None),
         ctx: UserContext = Depends(user_context_dep),
         app_config: MemoryAppConfig = Depends(app_config_dep),
     ) -> RetrieveResponse:
         return await service.retrieve(
-            ctx.api_key, query, app_config.tier1_limit, app_config.tier2_limit
+            ctx.api_key, app_name, app_config.tier1_limit, app_config.tier2_limit
         )
 
     return router
