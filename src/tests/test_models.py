@@ -110,7 +110,7 @@ def test_store_memory_input_valid_memory_types(mt: str) -> None:
 
 
 def test_retrieve_request_defaults() -> None:
-    r = RetrieveRequest(query="q")
+    r = RetrieveRequest()
     assert r.tier1_limit == 5
     assert r.tier2_limit == 10
 
@@ -132,3 +132,15 @@ def test_memory_row_round_trip_preserves_timestamp_in_json_dict() -> None:
     assert "timestamp" in payload
     loaded = MemoryRow.model_validate(payload)
     assert loaded.timestamp == ts
+
+
+def test_retrieve_request_defaults_app_name_to_none() -> None:
+    req = RetrieveRequest()
+    assert req.app_name is None
+    assert req.tier1_limit == 5
+    assert req.tier2_limit == 10
+
+
+def test_retrieve_request_accepts_app_name() -> None:
+    req = RetrieveRequest(app_name="my-dial-app")
+    assert req.app_name == "my-dial-app"
