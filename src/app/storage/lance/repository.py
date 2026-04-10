@@ -114,3 +114,17 @@ class LanceDbMemoryRepository(MemoryRepository):
                  .to_dict("records")
         )
         return [self._row_to_model(r) for r in records]
+
+    def filter_by_context(self, bucket: str, context: str, memory_type: MemoryType, limit: int) -> list[MemoryRow]:
+        table = self._open_table(bucket)
+        records = (
+            table.search()
+                 .where(
+                     f"memory_type = '{memory_type}' AND context = '{context}'",
+                     prefilter=True,
+                 )
+                 .limit(limit)
+                 .to_pandas()
+                 .to_dict("records")
+        )
+        return [self._row_to_model(r) for r in records]

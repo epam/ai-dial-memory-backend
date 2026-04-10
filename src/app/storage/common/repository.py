@@ -24,3 +24,6 @@ class MemoryRepository(ABC):
 
     @abstractmethod
     def top_by_importance(self, bucket: str, memory_type: MemoryType, limit: int) -> list[MemoryRow]: ...
+
+    @abstractmethod
+    def filter_by_context(self, bucket: str, context: str, memory_type: MemoryType, limit: int) -> list[MemoryRow]: ...
