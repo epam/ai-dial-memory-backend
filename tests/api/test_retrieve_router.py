@@ -4,7 +4,6 @@ from __future__ import annotations
 import datetime
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -21,12 +20,14 @@ def _make_row(row_id: str) -> MemoryRow:
         content="a fact",
         context="user",
         importance=0.9,
-        timestamp=datetime.datetime.now(tz=datetime.timezone.utc),
+        timestamp=datetime.datetime.now(tz=datetime.UTC),
         access_count=0,
     )
 
 
-def _make_client(service_retrieve_return: RetrieveResponse) -> tuple[TestClient, AsyncMock]:
+def _make_client(
+    service_retrieve_return: RetrieveResponse,
+) -> tuple[TestClient, AsyncMock]:
     service = MagicMock()
     service.retrieve = AsyncMock(return_value=service_retrieve_return)
 
