@@ -5,8 +5,6 @@ import datetime
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
-
 from src.app.models.memory import MemoryRow
 from src.app.storage.lance.repository import LanceDbMemoryRepository
 
