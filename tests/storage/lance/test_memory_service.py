@@ -88,3 +88,17 @@ async def test_retrieve_passes_tier_limits() -> None:
 
     repo.top_by_importance.assert_called_once_with("bucket-id", "core", 3)
     repo.filter_by_context.assert_called_once_with("bucket-id", "my-app", "episodic", 7)
+
+
+@pytest.mark.asyncio
+async def test_retrieve_tier1_rows_appear_before_tier2_rows() -> None:
+    service, _, repo = _make_service()
+    core_row = _make_row("c1", "core", importance=0.8)
+    episodic_row = _make_row("e1", "episodic", context="my-app", importance=0.9)
+    repo.top_by_importance.return_value = [core_row]
+    repo.filter_by_context.return_value = [episodic_row]
+
+    result = await service.retrieve("api-key", app_name="my-app")
+
+    assert result.facts[0].id == "c1"
+    assert result.facts[1].id == "e1"

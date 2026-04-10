@@ -71,10 +71,10 @@ async def test_retrieve_tier1_rows_appear_before_tier2_rows() -> None:
 
     repo = MagicMock()
     repo.top_by_importance = MagicMock(return_value=[t1])
-    repo.fts_search = MagicMock(return_value=[t2])
+    repo.filter_by_context = MagicMock(return_value=[t2])
 
     svc = MemoryService(_make_sync(), repo)
-    result = await svc.retrieve("key", "query", tier1_limit=5, tier2_limit=10)
+    result = await svc.retrieve("key", "my-app", tier1_limit=5, tier2_limit=10)
 
     assert [r.id for r in result.facts] == ["t1", "t2"]
 
@@ -87,10 +87,10 @@ async def test_retrieve_deduplicates_by_id_keeping_tier1_copy() -> None:
 
     repo = MagicMock()
     repo.top_by_importance = MagicMock(return_value=[shared])
-    repo.fts_search = MagicMock(return_value=[dup_in_tier2, unique])
+    repo.filter_by_context = MagicMock(return_value=[dup_in_tier2, unique])
 
     svc = MemoryService(_make_sync(), repo)
-    result = await svc.retrieve("key", "query", tier1_limit=5, tier2_limit=10)
+    result = await svc.retrieve("key", "my-app", tier1_limit=5, tier2_limit=10)
 
     ids = [r.id for r in result.facts]
     assert ids.count("dup") == 1
