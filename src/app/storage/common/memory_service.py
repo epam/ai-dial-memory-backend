@@ -17,7 +17,7 @@ class AbstractMemoryService(ABC):
     async def retrieve(
         self,
         api_key: str,
-        query: str,
+        app_name: str | None,
         tier1_limit: int = 5,
         tier2_limit: int = 10,
     ) -> RetrieveResponse: ...

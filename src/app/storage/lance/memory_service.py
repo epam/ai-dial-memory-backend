@@ -46,13 +46,17 @@ class MemoryService(AbstractMemoryService):
     async def retrieve(
         self,
         api_key: str,
-        query: str,
+        app_name: str | None,
         tier1_limit: int = 5,
         tier2_limit: int = 10,
     ) -> RetrieveResponse:
         async with self._sync.open(api_key, write=False) as (_, bucket):
             tier1 = self._repo.top_by_importance(bucket, "core", tier1_limit)
-            tier2 = self._repo.fts_search(bucket, query, "episodic", tier2_limit)
+            tier2 = (
+                self._repo.filter_by_context(bucket, app_name, "episodic", tier2_limit)
+                if app_name is not None
+                else []
+            )
 
         seen: set[str] = set()
         facts: list[MemoryRow] = []
