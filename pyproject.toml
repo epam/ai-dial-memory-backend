@@ -14,7 +14,7 @@ dependencies = [
     "fastapi-injector",
     "lancedb",
     "pydantic-settings",
-    "aidial-client",
+    "aidial-client>=0.7.1,<0.8.0",
     "python-json-logger",
     "mcp[cli]",
     "pandas",

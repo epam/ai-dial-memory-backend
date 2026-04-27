@@ -2,14 +2,14 @@
 
 [[package]]
 name = "aidial-client"
-version = "0.6.2"
+version = "0.7.1"
 description = "A Python client library for the AI DIAL API"
 optional = false
 python-versions = "<3.14,>=3.10"
 groups = ["main"]
 files = [
-    {file = "aidial_client-0.6.2-py3-none-any.whl", hash = "sha256:9b344062b790b36c851938b135dd83d1fd627019cf07c2e0090162844c2cebee"},
-    {file = "aidial_client-0.6.2.tar.gz", hash = "sha256:405a22ad45a5c2137b33409ff63d9eaad9c4ab281d3a75c28547a07bc57c6efd"},
+    {file = "aidial_client-0.7.1-py3-none-any.whl", hash = "sha256:41d753000ec87a397f6f1176a678ee7eacbc94fe3c9133222e14f7ae9ac0e230"},
+    {file = "aidial_client-0.7.1.tar.gz", hash = "sha256:67bc74487b923e86fd6de2ca824ee05c13cedd35304350ddbe1e0758943fbe40"},
 ]
 
 [package.dependencies]
@@ -2394,4 +2394,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<3.14"
-content-hash = "e83780c1f467732a699d173084ff517837955c9456b5ac998af82fdaf9189dfa"
+content-hash = "5133fa19203c4d32a96a80da6af12553d535a334835be47ff18a1d62d8e8d7f5"

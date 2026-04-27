@@ -58,10 +58,10 @@ def create_mcp_server(service: AbstractMemoryService) -> FastMCP:
         except Exception as exc:
             return [{"error": str(exc)}]
 
-    @mcp.tool()
+    @mcp.tool(name="prime_memories")
     async def prime_memories(
-        app_name: str | None,
         ctx: Context,
+        app_name: str | None = None,
     ) -> list[dict]:
         """Return top core memories plus episodic memories scoped to the given
         app/deployment name. Designed as a synthetic tool call — inject at the
