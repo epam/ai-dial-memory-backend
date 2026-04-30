@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.app.models.memory import MemoryRow, StoreMemoryOutput
 from src.app.mcp.tools import create_mcp_server
+from src.app.models.memory import MemoryRow, StoreMemoryOutput
 
 
 def _row(id: str) -> MemoryRow:
@@ -17,7 +17,7 @@ def _row(id: str) -> MemoryRow:
         content="hello",
         context="ctx",
         importance=0.5,
-        timestamp=datetime.datetime(2025, 1, 1, tzinfo=datetime.timezone.utc),
+        timestamp=datetime.datetime(2025, 1, 1, tzinfo=datetime.UTC),
         access_count=0,
     )
 

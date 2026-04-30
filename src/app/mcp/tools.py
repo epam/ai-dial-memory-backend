@@ -78,7 +78,10 @@ def create_mcp_server(service: AbstractMemoryService) -> FastMCP:
 
     @mcp.tool()
     async def get_skill() -> str:
-        """Return the memory skill instructions. Call once at dialogue start as a synthetic tool call."""
+        """Return the memory skill instructions.
+
+        Call once at dialogue start as a synthetic tool call.
+        """
         return SKILL_INSTRUCTIONS
 
     return mcp

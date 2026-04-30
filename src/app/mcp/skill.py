@@ -1,4 +1,5 @@
 """Skill instructions returned by the get_skill MCP tool."""
+# ruff: noqa: E501
 from __future__ import annotations
 
 SKILL_INSTRUCTIONS: str = """\
