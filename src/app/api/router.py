@@ -10,8 +10,6 @@ from injector import Injector
 
 from src.app.api.configuration_support_router import make_configuration_support_router
 from src.app.api.memory_router import make_memory_router
-from src.app.api.retrieve_router import make_retrieve_router
-from src.app.api.skill_router import make_skill_router
 from src.app.config.application import MemoryAppConfig
 from src.app.dial.dial_storage import DialStorageService
 from src.app.middleware.app_config import get_app_config
@@ -44,7 +42,5 @@ def create_api_router(injector: Injector, lifespan: Any = None) -> FastAPI:
             return JSONResponse(status_code=500, content={"message": "Internal server error"})
 
     app.include_router(make_configuration_support_router())
-    app.include_router(make_skill_router())
-    app.include_router(make_retrieve_router(service, _user_context_dep, _app_config_dep))
     app.include_router(make_memory_router(service, _user_context_dep))
     return app
