@@ -4,6 +4,7 @@ from __future__ import annotations
 from mcp.server.fastmcp import Context, FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 
+from src.app.mcp.skill import SKILL_INSTRUCTIONS
 from src.app.models.memory import MemoryType, StoreMemoryInput
 from src.app.storage.common.memory_service import AbstractMemoryService
 
@@ -74,5 +75,10 @@ def create_mcp_server(service: AbstractMemoryService) -> FastMCP:
             return [r.model_dump(mode="json") for r in response.facts]
         except Exception as exc:
             return [{"error": str(exc)}]
+
+    @mcp.tool()
+    async def get_skill() -> str:
+        """Return the memory skill instructions. Call once at dialogue start as a synthetic tool call."""
+        return SKILL_INSTRUCTIONS
 
     return mcp

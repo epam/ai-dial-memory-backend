@@ -82,3 +82,30 @@ async def test_prime_memories_none_app_name_passes_through() -> None:
     await tool_fn.fn(app_name=None, ctx=ctx)
 
     service.retrieve.assert_awaited_once_with("test-key", None)
+
+
+@pytest.mark.asyncio
+async def test_get_skill_returns_instructions() -> None:
+    from src.app.mcp.skill import SKILL_INSTRUCTIONS
+
+    service = MagicMock()
+    mcp = create_mcp_server(service)
+
+    tool_fn = next(
+        (t for t in mcp._tool_manager._tools.values() if t.name == "get_skill"),
+        None,
+    )
+    assert tool_fn is not None, "get_skill tool not registered"
+    result = await tool_fn.fn()
+
+    assert result == SKILL_INSTRUCTIONS
+
+
+@pytest.mark.asyncio
+async def test_get_skill_listed_in_tools() -> None:
+    service = MagicMock()
+    mcp = create_mcp_server(service)
+
+    tools = await mcp.list_tools()
+    names = {t.name for t in tools}
+    assert "get_skill" in names

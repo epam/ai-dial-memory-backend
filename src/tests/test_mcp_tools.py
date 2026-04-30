@@ -127,6 +127,7 @@ async def test_mcp_server_lists_both_tools() -> None:
 
     assert "store_memory" in names
     assert "search_archive" in names
+    assert "get_skill" in names
 
 
 @pytest.mark.asyncio
