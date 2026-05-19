@@ -74,7 +74,7 @@ class BaseApplicationTypeConfig(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def DialConfigField(
+def dial_config_field(
     default: Any,
     *,
     property_kind: str = "server",
@@ -87,7 +87,7 @@ def DialConfigField(
     return Field(default, json_schema_extra=extra, **kwargs)
 
 
-def DialResourceConfigField(default: Any, **kwargs: Any) -> Any:
+def dial_resource_config_field(default: Any, **kwargs: Any) -> Any:
     """Field that references a DIAL resource (marks dial:resource = true)."""
     extra: dict[str, Any] = {_RESOURCE_MARKER: True}
     if "json_schema_extra" in kwargs:
@@ -95,7 +95,7 @@ def DialResourceConfigField(default: Any, **kwargs: Any) -> Any:
     return Field(default, json_schema_extra=extra, **kwargs)
 
 
-def DialFileConfigField(default: Any, **kwargs: Any) -> Any:
+def dial_file_config_field(default: Any, **kwargs: Any) -> Any:
     """Field that references a DIAL file (marks dial:file = true, format = dial-file-encoded)."""
     extra: dict[str, Any] = {_FILE_MARKER: True}
     if "json_schema_extra" in kwargs:
@@ -103,7 +103,7 @@ def DialFileConfigField(default: Any, **kwargs: Any) -> Any:
     return Field(default, json_schema_extra=extra, **kwargs)
 
 
-def PreviewField(default: Any, **kwargs: Any) -> Any:
+def preview_field(default: Any, **kwargs: Any) -> Any:
     """Field hidden from schema unless ENABLE_PREVIEW_FEATURES env var is set."""
     extra: dict[str, Any] = {_PREVIEW_MARKER: True}
     if "json_schema_extra" in kwargs:

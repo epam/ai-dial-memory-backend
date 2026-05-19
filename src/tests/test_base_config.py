@@ -5,10 +5,10 @@ import pytest
 
 from src.app.dial.base_config import (
     BaseApplicationTypeConfig,
-    DialConfigField,
-    DialFileConfigField,
-    DialResourceConfigField,
-    PreviewField,
+    dial_config_field,
+    dial_file_config_field,
+    dial_resource_config_field,
+    preview_field,
 )
 from src.app.dial.dial_schema import DialJSONSchemaExtensions
 
@@ -17,8 +17,8 @@ class _SampleConfig(BaseApplicationTypeConfig):
     _dial_schema_id = "test-app"
     _dial_application_type_display_name = "Test App"
 
-    name: str = DialConfigField(default="hello", property_kind="client")
-    score: float = DialConfigField(default=0.5, property_kind="server")
+    name: str = dial_config_field(default="hello", property_kind="client")
+    score: float = dial_config_field(default=0.5, property_kind="server")
 
 
 # ---------------------------------------------------------------------------
@@ -123,8 +123,8 @@ def test_preview_field_excluded_without_env_var(monkeypatch: pytest.MonkeyPatch)
         _dial_schema_id = "preview-app"
         _dial_application_type_display_name = "Preview App"
 
-        hidden: str = PreviewField(default="x")
-        visible: str = DialConfigField(default="y", property_kind="client")
+        hidden: str = preview_field(default="x")
+        visible: str = dial_config_field(default="y", property_kind="client")
 
     schema = _WithPreview.model_json_schema()
     assert "hidden" not in schema.get("properties", {})
@@ -138,7 +138,7 @@ def test_preview_field_included_with_env_var(monkeypatch: pytest.MonkeyPatch) ->
         _dial_schema_id = "preview-app-2"
         _dial_application_type_display_name = "Preview App 2"
 
-        hidden: str = PreviewField(default="x")
+        hidden: str = preview_field(default="x")
 
     schema = _WithPreview2.model_json_schema()
     assert "hidden" in schema.get("properties", {})
@@ -154,7 +154,7 @@ def test_dial_resource_field_marks_resource_in_schema() -> None:
         _dial_schema_id = "resource-app"
         _dial_application_type_display_name = "Resource App"
 
-        res: str = DialResourceConfigField(default="some/path")
+        res: str = dial_resource_config_field(default="some/path")
 
     schema = _ResourceConfig.model_json_schema()
     assert schema["properties"]["res"].get(DialJSONSchemaExtensions.RESOURCE) is True
@@ -165,7 +165,7 @@ def test_dial_file_field_marks_file_and_format_in_schema() -> None:
         _dial_schema_id = "file-app"
         _dial_application_type_display_name = "File App"
 
-        doc: str = DialFileConfigField(default="files/abc/doc.pdf")
+        doc: str = dial_file_config_field(default="files/abc/doc.pdf")
 
     schema = _FileConfig.model_json_schema()
     prop = schema["properties"]["doc"]

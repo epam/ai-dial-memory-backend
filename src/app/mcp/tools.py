@@ -76,7 +76,7 @@ def create_mcp_server(service: AbstractMemoryService) -> FastMCP:
         except Exception as exc:
             return [{"error": str(exc)}]
 
-    @mcp.tool()
+    @mcp.tool(name="get_skill")
     async def get_skill() -> str:
         """Return the memory skill instructions.
 
