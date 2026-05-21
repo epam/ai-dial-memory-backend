@@ -45,7 +45,7 @@ async def test_download_writes_to_local_path(
 ) -> None:
     mock_result = AsyncMock()
     mock_client = MagicMock()
-    mock_client.files.download.return_value = mock_result
+    mock_client.files.download = AsyncMock(return_value=mock_result)
 
     with patch.object(service, "_make_client", return_value=mock_client):
         await service.download("key", "files/bucket/memory.lance", tmp_path / "out")

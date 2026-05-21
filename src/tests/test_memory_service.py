@@ -4,7 +4,7 @@ from __future__ import annotations
 import datetime
 from contextlib import asynccontextmanager
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -200,3 +200,75 @@ def test_abstract_memory_service_is_abstract() -> None:
 
 def test_memory_service_implements_abstract_interface() -> None:
     assert issubclass(MemoryService, AbstractMemoryService)
+
+
+# ---------------------------------------------------------------------------
+# retrieve() — delegating to repo.top_by_importance + filter_by_context
+# ---------------------------------------------------------------------------
+
+def _make_retrieve_row(
+    row_id: str,
+    memory_type: str,
+    context: str = "user",
+    importance: float = 0.8,
+) -> MemoryRow:
+    return MemoryRow(
+        id=row_id,
+        memory_type=memory_type,  # type: ignore[arg-type]
+        content=f"content {row_id}",
+        context=context,
+        importance=importance,
+        timestamp=datetime.datetime.now(tz=datetime.timezone.utc),
+        access_count=0,
+    )
+
+
+def _make_retrieve_svc() -> tuple[MemoryService, MagicMock, MagicMock]:
+    sync = MagicMock()
+    repo = MagicMock()
+    cm = MagicMock()
+    cm.__aenter__ = AsyncMock(return_value=(None, "bucket-id"))
+    cm.__aexit__ = AsyncMock(return_value=False)
+    sync.open.return_value = cm
+    return MemoryService(sync, repo), sync, repo
+
+
+@pytest.mark.asyncio
+async def test_retrieve_without_app_name_returns_only_core() -> None:
+    service, _, repo = _make_retrieve_svc()
+    repo.top_by_importance.return_value = [_make_retrieve_row("c1", "core")]
+
+    from src.app.models.memory import RetrieveResponse
+    result = await service.retrieve("api-key", app_name=None)
+
+    assert isinstance(result, RetrieveResponse)
+    assert len(result.facts) == 1
+    assert result.facts[0].id == "c1"
+    repo.filter_by_context.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_retrieve_with_app_name_returns_core_and_episodic() -> None:
+    service, _, repo = _make_retrieve_svc()
+    repo.top_by_importance.return_value = [_make_retrieve_row("c1", "core")]
+    repo.filter_by_context.return_value = [_make_retrieve_row("e1", "episodic", context="my-app")]
+
+    result = await service.retrieve("api-key", app_name="my-app")
+
+    assert len(result.facts) == 2
+    ids = [r.id for r in result.facts]
+    assert "c1" in ids
+    assert "e1" in ids
+    repo.filter_by_context.assert_called_once_with("bucket-id", "my-app", "episodic", 10)
+
+
+@pytest.mark.asyncio
+async def test_retrieve_passes_tier_limits() -> None:
+    service, _, repo = _make_retrieve_svc()
+    repo.top_by_importance.return_value = []
+    repo.filter_by_context.return_value = []
+
+    await service.retrieve("api-key", app_name="my-app", tier1_limit=3, tier2_limit=7)
+
+    repo.top_by_importance.assert_called_once_with("bucket-id", "core", 3)
+    repo.filter_by_context.assert_called_once_with("bucket-id", "my-app", "episodic", 7)
