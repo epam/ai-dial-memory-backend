@@ -187,6 +187,13 @@ python src/scripts/dump_app_schema.py          # Write docs/generated-app-schema
 python src/scripts/dump_app_schema.py --check  # Verify schema is up to date (CI)
 ```
 
+## Docker base image
+
+The service uses `python:3.13-slim` (Debian) rather than an Alpine variant.
+LanceDB and its dependency PyArrow ship pre-built wheels compiled against `glibc` (the `manylinux` standard).
+Alpine Linux uses `musl libc`, which is not binary-compatible with those wheels.
+Building from source on Alpine requires a full Rust toolchain, produces very long build times, and typically results in a larger final image than `slim` — so `slim` is the right base for any service that depends on LanceDB.
+
 ## Deployment
 
 ### Registering with DIAL Core
