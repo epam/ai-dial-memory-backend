@@ -98,7 +98,6 @@ class LanceDbMemoryRepository(MemoryRepository):
 
     def fts_search(self, bucket: str, query: str, memory_type: MemoryType, limit: int) -> list[MemoryRow]:
         table = self._open_table(bucket)
-        table.create_fts_index("content", replace=True)
         records = (
             table.search(query, query_type="fts")
                  .where(f"memory_type = '{_sql_escape(memory_type)}'", prefilter=True)

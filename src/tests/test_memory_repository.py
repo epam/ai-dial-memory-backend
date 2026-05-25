@@ -129,6 +129,20 @@ def test_get_returns_none_when_empty(settings: AppSettings) -> None:
         assert repo.get("bucket-a", "missing") is None
 
 
+def test_fts_search_does_not_rebuild_index(settings: AppSettings) -> None:
+    table = MagicMock()
+    db = MagicMock()
+    db.table_names.return_value = ["memory"]
+    db.open_table.return_value = table
+    table.search.return_value = _query_chain(_fake_df([]))
+
+    with patch("src.app.storage.lance.repository.lancedb.connect", return_value=db):
+        repo = LanceDbMemoryRepository(settings)
+        repo.fts_search("b", "needle", "core", limit=5)
+
+    table.create_fts_index.assert_not_called()
+
+
 def test_fts_search_uses_query_type_fts(settings: AppSettings) -> None:
     table = MagicMock()
     db = MagicMock()
