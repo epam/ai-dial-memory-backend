@@ -41,7 +41,7 @@ def test_storage_sync_is_singleton(monkeypatch: pytest.MonkeyPatch) -> None:
     assert injector.get(StorageSync) is injector.get(StorageSync)
 
 
-def test_repository_is_transient(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_repository_is_singleton(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DIAL_URL", "http://dial")
     injector = Injector([DialModule(), LanceModule()])
-    assert injector.get(MemoryRepository) is not injector.get(MemoryRepository)
+    assert injector.get(MemoryRepository) is injector.get(MemoryRepository)
