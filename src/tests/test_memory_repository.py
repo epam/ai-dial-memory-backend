@@ -158,3 +158,33 @@ def test_top_by_importance_sorts_descending(settings: AppSettings) -> None:
     df.sort_values.assert_called_once()
     assert out[0].id == "high"
     assert out[1].id == "low"
+
+
+def test_delete_escapes_single_quote_in_row_id(settings: AppSettings) -> None:
+    table = MagicMock()
+    db = MagicMock()
+    db.table_names.return_value = ["memory"]
+    db.open_table.return_value = table
+    table.search.return_value = _query_chain(_fake_df([]))
+
+    with patch("src.app.storage.lance.repository.lancedb.connect", return_value=db):
+        repo = LanceDbMemoryRepository(settings)
+        repo.delete("bucket-a", "foo'bar")
+
+    table.delete.assert_called_once_with("id = 'foo''bar'")
+
+
+def test_filter_by_context_escapes_single_quote(settings: AppSettings) -> None:
+    table = MagicMock()
+    db = MagicMock()
+    db.table_names.return_value = ["memory"]
+    db.open_table.return_value = table
+    chain = _query_chain(_fake_df([]))
+    table.search.return_value = chain
+
+    with patch("src.app.storage.lance.repository.lancedb.connect", return_value=db):
+        repo = LanceDbMemoryRepository(settings)
+        repo.filter_by_context("bucket-a", "O'Brien", "episodic", limit=5)
+
+    call_args = chain.where.call_args[0][0]
+    assert "O''Brien" in call_args

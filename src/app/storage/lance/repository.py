@@ -14,6 +14,11 @@ from src.app.storage.common.repository import MemoryRepository
 
 logger = logging.getLogger(__name__)
 
+
+def _sql_escape(value: str) -> str:
+    return value.replace("'", "''")
+
+
 MEMORY_SCHEMA = pa.schema([
     pa.field("id",              pa.string(),            nullable=False),
     pa.field("memory_type",     pa.string(),            nullable=False),
@@ -70,7 +75,7 @@ class LanceDbMemoryRepository(MemoryRepository):
         table = self._open_table(bucket)
         results = (
             table.search()
-                 .where(f"id = '{row_id}'", prefilter=True)
+                 .where(f"id = '{_sql_escape(row_id)}'", prefilter=True)
                  .limit(1)
                  .to_pandas()
         )
@@ -82,13 +87,13 @@ class LanceDbMemoryRepository(MemoryRepository):
         table = self._open_table(bucket)
         q = table.search()
         if memory_type is not None:
-            q = q.where(f"memory_type = '{memory_type}'", prefilter=True)
+            q = q.where(f"memory_type = '{_sql_escape(memory_type)}'", prefilter=True)
         records = q.limit(10_000).to_pandas().to_dict("records")
         return [self._row_to_model(r) for r in records]
 
     def delete(self, bucket: str, row_id: str) -> None:
         table = self._open_table(bucket)
-        table.delete(f"id = '{row_id}'")
+        table.delete(f"id = '{_sql_escape(row_id)}'")
         logger.debug("Deleted row %s from bucket %s", row_id, bucket)
 
     def fts_search(self, bucket: str, query: str, memory_type: MemoryType, limit: int) -> list[MemoryRow]:
@@ -96,7 +101,7 @@ class LanceDbMemoryRepository(MemoryRepository):
         table.create_fts_index("content", replace=True)
         records = (
             table.search(query, query_type="fts")
-                 .where(f"memory_type = '{memory_type}'", prefilter=True)
+                 .where(f"memory_type = '{_sql_escape(memory_type)}'", prefilter=True)
                  .limit(limit)
                  .to_pandas()
                  .to_dict("records")
@@ -107,7 +112,7 @@ class LanceDbMemoryRepository(MemoryRepository):
         table = self._open_table(bucket)
         records = (
             table.search()
-                 .where(f"memory_type = '{memory_type}'", prefilter=True)
+                 .where(f"memory_type = '{_sql_escape(memory_type)}'", prefilter=True)
                  .limit(limit)
                  .to_pandas()
                  .sort_values("importance", ascending=False)
@@ -120,7 +125,7 @@ class LanceDbMemoryRepository(MemoryRepository):
         records = (
             table.search()
                  .where(
-                     f"memory_type = '{memory_type}' AND context = '{context}'",
+                     f"memory_type = '{_sql_escape(memory_type)}' AND context = '{_sql_escape(context)}'",
                      prefilter=True,
                  )
                  .limit(limit)
