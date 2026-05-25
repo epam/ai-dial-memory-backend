@@ -41,6 +41,14 @@ def _fake_df(records: list[dict]) -> MagicMock:
     sorted_m.to_dict.side_effect = lambda orient: (
         list(sorted_recs) if orient == "records" else []
     )
+
+    def _head(n: int) -> MagicMock:
+        sliced = sorted_recs[:n]
+        hm = MagicMock()
+        hm.to_dict.side_effect = lambda orient: list(sliced) if orient == "records" else []
+        return hm
+
+    sorted_m.head.side_effect = _head
     m.sort_values.return_value = sorted_m
     return m
 
@@ -48,6 +56,7 @@ def _fake_df(records: list[dict]) -> MagicMock:
 def _query_chain(df: MagicMock) -> MagicMock:
     q = MagicMock()
     q.where.return_value = q
+    q.order_by.return_value = q
     q.limit.return_value = q
     q.to_pandas.return_value = df
     return q
@@ -141,23 +150,29 @@ def test_fts_search_uses_query_type_fts(settings: AppSettings) -> None:
     assert out[0].id == "rid-1"
 
 
-def test_top_by_importance_sorts_descending(settings: AppSettings) -> None:
+def test_top_by_importance_returns_top_n_not_arbitrary_n(settings: AppSettings) -> None:
     table = MagicMock()
     db = MagicMock()
     db.table_names.return_value = ["memory"]
     db.open_table.return_value = table
-    r_low = _row_dict("low", importance=0.1)
-    r_high = _row_dict("high", importance=0.9)
-    df = _fake_df([r_low, r_high])
-    table.search.return_value = _query_chain(df)
+    rows = [
+        _row_dict("low",  importance=0.1),
+        _row_dict("mid",  importance=0.5),
+        _row_dict("high", importance=0.9),
+    ]
+    chain = _query_chain(_fake_df(rows))
+    table.search.return_value = chain
 
     with patch("src.app.storage.lance.repository.lancedb.connect", return_value=db):
         repo = LanceDbMemoryRepository(settings)
-        out = repo.top_by_importance("b", "core", limit=10)
+        # limit=2 must return the two highest, not the first two scanned
+        out = repo.top_by_importance("b", "core", limit=2)
 
-    df.sort_values.assert_called_once()
+    assert len(out) == 2
     assert out[0].id == "high"
-    assert out[1].id == "low"
+    assert out[1].id == "mid"
+    # no DB-level limit applied before sorting
+    chain.limit.assert_not_called()
 
 
 def test_delete_escapes_single_quote_in_row_id(settings: AppSettings) -> None:

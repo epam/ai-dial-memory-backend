@@ -110,12 +110,14 @@ class LanceDbMemoryRepository(MemoryRepository):
 
     def top_by_importance(self, bucket: str, memory_type: MemoryType, limit: int) -> list[MemoryRow]:
         table = self._open_table(bucket)
+        # TODO: push ORDER BY importance DESC LIMIT n to LanceDB once order_by() lands
+        #       in a released Python client (not yet in 0.30.2).
         records = (
             table.search()
                  .where(f"memory_type = '{_sql_escape(memory_type)}'", prefilter=True)
-                 .limit(limit)
                  .to_pandas()
                  .sort_values("importance", ascending=False)
+                 .head(limit)
                  .to_dict("records")
         )
         return [self._row_to_model(r) for r in records]
