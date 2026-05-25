@@ -29,3 +29,10 @@ def test_app_module_memory_service_is_singleton(monkeypatch: pytest.MonkeyPatch)
     svc1 = injector.get(AbstractMemoryService)
     svc2 = injector.get(AbstractMemoryService)
     assert svc1 is svc2
+
+
+def test_app_module_settings_is_singleton(monkeypatch: pytest.MonkeyPatch) -> None:
+    from src.app.config.app_settings import AppSettings
+    monkeypatch.setenv("DIAL_URL", "http://dial.test")
+    injector = Injector([AppModule()])
+    assert injector.get(AppSettings) is injector.get(AppSettings)

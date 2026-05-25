@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from injector import Binder, Injector, Module, provider, singleton
 
 from src.app.api.router import create_api_router
+from src.app.config.settings_module import SettingsModule
 from src.app.dial.dial_module import DialModule
 from src.app.mcp.tools import create_mcp_server
 from src.app.storage.common.memory_service import AbstractMemoryService
@@ -16,6 +17,7 @@ from src.app.storage.lance.module import LanceModule
 
 class AppModule(Module):
     def configure(self, binder: Binder) -> None:
+        binder.install(SettingsModule())
         binder.install(DialModule())
         binder.install(LanceModule())
 
