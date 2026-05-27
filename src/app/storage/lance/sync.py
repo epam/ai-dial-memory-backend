@@ -139,5 +139,9 @@ class StorageSync:
 
 
 def _is_not_found(exc: BaseException) -> bool:
+    from aidial_client._exception import ResourceNotFoundError
+
+    if isinstance(exc.__cause__, ResourceNotFoundError):
+        return True
     text = str(exc).lower()
     return "404" in text or "not found" in text

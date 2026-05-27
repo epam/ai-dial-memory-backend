@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from mcp.server.fastmcp import Context, FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
+from pydantic import ValidationError
 
 from src.app.mcp.skill import SKILL_INSTRUCTIONS
 from src.app.models.memory import MemoryType, StoreMemoryInput
@@ -34,15 +35,22 @@ def create_mcp_server(service: AbstractMemoryService) -> FastMCP:
         if not api_key:
             return {"error": "Api-Key header missing", "status": 401}
         try:
-            result = await service.store(
-                api_key,
-                StoreMemoryInput(
-                    content=content,
-                    memory_type=memory_type,
-                    context=context,
-                    importance=importance,
-                ),
+            inp = StoreMemoryInput(
+                content=content,
+                memory_type=memory_type,
+                context=context,
+                importance=importance,
             )
+        except ValidationError as exc:
+            return {
+                "error": "validation_error",
+                "detail": [
+                    {"field": ".".join(str(l) for l in e["loc"]), "message": e["msg"]}
+                    for e in exc.errors()
+                ],
+            }
+        try:
+            result = await service.store(api_key, inp)
             return {"id": result.id, "stored": result.stored}
         except Exception as exc:
             return {"error": str(exc)}

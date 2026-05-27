@@ -11,7 +11,6 @@ from injector import Injector
 from src.app.api.configuration_support_router import make_configuration_support_router
 from src.app.api.memory_router import make_memory_router
 from src.app.config.application import MemoryAppConfig
-from src.app.dial.dial_storage import DialStorageService
 from src.app.middleware.app_config import get_app_config
 from src.app.middleware.auth import UserContext, get_user_context
 from src.app.storage.common.errors import RowNotFoundError, StorageSyncError
@@ -20,10 +19,9 @@ from src.app.storage.common.memory_service import AbstractMemoryService
 
 def create_api_router(injector: Injector, lifespan: Any = None) -> FastAPI:
     service = injector.get(AbstractMemoryService)
-    dial_storage_service = injector.get(DialStorageService)
 
     async def _user_context_dep(request: Request) -> UserContext:
-        return await get_user_context(request, dial_storage_service)
+        return await get_user_context(request)
 
     async def _app_config_dep(request: Request) -> MemoryAppConfig:
         return await get_app_config(request)

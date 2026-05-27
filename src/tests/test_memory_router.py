@@ -42,7 +42,7 @@ def _make_app(svc: MagicMock) -> FastAPI:
             return JSONResponse(status_code=503, content={"message": str(exc)})
 
     async def _fake_user_context() -> UserContext:
-        return UserContext(api_key="test-key", bucket="test-bucket")
+        return UserContext(api_key="test-key")
 
     memory_router = make_memory_router(svc, _fake_user_context)
     app.include_router(memory_router)
