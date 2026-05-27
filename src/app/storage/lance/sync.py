@@ -41,7 +41,8 @@ class StorageSync:
             self._locks[bucket_id] = asyncio.Lock()
         return self._locks[bucket_id]
 
-    def _remote_memory_prefix(self, storage_home: str) -> str:
+    @staticmethod
+    def _remote_memory_prefix(storage_home: str) -> str:
         return f"{storage_home.rstrip('/')}/memory/memory.tar.gz"
 
     async def _sync_down(
@@ -139,9 +140,6 @@ class StorageSync:
 
 
 def _is_not_found(exc: BaseException) -> bool:
-    from aidial_client._exception import ResourceNotFoundError
+    from aidial_client import ResourceNotFoundError
 
-    if isinstance(exc.__cause__, ResourceNotFoundError):
-        return True
-    text = str(exc).lower()
-    return "404" in text or "not found" in text
+    return isinstance(exc.__cause__, ResourceNotFoundError)
