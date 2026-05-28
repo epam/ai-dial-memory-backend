@@ -15,7 +15,8 @@ _KIND_MARKER = "x-dial-property-kind"
 _RESOURCE_MARKER = "x-dial-resource"
 _FILE_MARKER = "x-dial-file"
 _PREVIEW_MARKER = "x-preview"
-
+_DIAL_SCHEMA_URL = "https://dial.epam.com/application_type_schemas/schema#"
+_DIAL_ID_PREFIX = "https://mydial.epam.com/custom_application_schemas/"
 
 def _defined_in_class(cls: type, name: str) -> bool:
     """Return True if *name* was explicitly set in *cls*'s own class body.
@@ -177,8 +178,8 @@ def _add_dial_root_keys(
 ) -> dict[str, Any]:
     """Inject DIAL-specific root keys into the schema."""
     schema = copy.deepcopy(schema)
-    schema["$id"] = cls._dial_schema_id
-    schema["$schema"] = "http://json-schema.org/draft-07/schema#"
+    schema["$id"] = f"{_DIAL_ID_PREFIX}{cls._dial_schema_id}"
+    schema["$schema"] = _DIAL_SCHEMA_URL
     schema[DialJSONSchemaExtensions.APPLICATION_TYPE_DISPLAY_NAME] = (
         cls._dial_application_type_display_name
     )

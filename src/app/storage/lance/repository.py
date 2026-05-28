@@ -88,7 +88,7 @@ class LanceDbMemoryRepository(MemoryRepository):
         q = table.search()
         if memory_type is not None:
             q = q.where(f"memory_type = '{_sql_escape(memory_type)}'", prefilter=True)
-        records = q.limit(10_000).to_pandas().to_dict("records")
+        records = q.to_pandas().to_dict("records")
         return [self._row_to_model(r) for r in records]
 
     def delete(self, bucket: str, row_id: str) -> None:
