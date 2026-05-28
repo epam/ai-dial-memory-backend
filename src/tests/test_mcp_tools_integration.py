@@ -47,6 +47,10 @@ class InMemoryRepository(MemoryRepository):
         rows = [r for r in self._rows.values() if r.memory_type == memory_type]
         return sorted(rows, key=lambda r: r.importance, reverse=True)[:limit]
 
+    def filter_by_context(self, bucket: str, context: str, memory_type: MemoryType, limit: int) -> list[MemoryRow]:
+        rows = [r for r in self._rows.values() if r.memory_type == memory_type and r.context == context]
+        return sorted(rows, key=lambda r: r.importance, reverse=True)[:limit]
+
 
 def _make_context(api_key: str = "key") -> MagicMock:
     """Build a mock FastMCP Context with Api-Key header."""

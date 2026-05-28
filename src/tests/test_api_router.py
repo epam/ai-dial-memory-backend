@@ -10,7 +10,7 @@ from injector import Injector, Module, provider, singleton
 
 from src.app.api.router import create_api_router
 from src.app.dial.dial_storage import DialStorageService
-from src.app.models.memory import MemoryRow, RetrieveResponse
+from src.app.models.memory import MemoryRow
 from src.app.storage.common.memory_service import AbstractMemoryService
 
 
@@ -61,17 +61,3 @@ async def test_list_memory_route_reachable_via_injector() -> None:
     assert r.status_code == 200
 
 
-@pytest.mark.asyncio
-async def test_retrieve_route_not_shadowed_by_memory_id_route() -> None:
-    svc = MagicMock()
-    svc.retrieve = AsyncMock(return_value=RetrieveResponse(facts=[]))
-    dial = MagicMock()
-    dial.get_storage_home = AsyncMock(return_value="files/bucket")
-
-    async with AsyncClient(
-        transport=ASGITransport(app=_make_app(svc, dial)), base_url="http://test"
-    ) as c:
-        r = await c.get("/memory/retrieve?query=hello", headers={"Api-Key": "test-key"})
-
-    assert r.status_code == 200
-    svc.retrieve.assert_awaited_once()

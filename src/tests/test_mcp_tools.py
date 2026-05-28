@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.app.mcp.tools import create_mcp_server
-from src.app.models.memory import MemoryRow, StoreMemoryOutput
+from src.app.models.memory import MemoryRow, RetrieveResponse, StoreMemoryOutput
 
 
 def _row(id: str) -> MemoryRow:
@@ -150,3 +150,94 @@ async def test_search_archive_tool_schema_has_no_api_key_param() -> None:
     search_tool = next(t for t in tools if t.name == "search_archive")
     param_names = set(search_tool.inputSchema.get("properties", {}).keys())
     assert "api_key" not in param_names
+
+
+# ---------------------------------------------------------------------------
+# prime_memories and get_skill tools
+# ---------------------------------------------------------------------------
+
+def _make_prime_ctx(api_key: str | None) -> MagicMock:
+    """Build a mock FastMCP Context for prime_memories (headers.get() style)."""
+    ctx = MagicMock()
+    ctx.request_context.request.headers.get.return_value = api_key
+    return ctx
+
+
+def _make_prime_row(row_id: str) -> MemoryRow:
+    import datetime
+    return MemoryRow(
+        id=row_id,
+        memory_type="core",
+        content="a fact",
+        context="user",
+        importance=0.9,
+        timestamp=datetime.datetime.now(tz=datetime.UTC),
+        access_count=0,
+    )
+
+
+def _get_tool_fn(mcp, name: str):  # type: ignore[no-untyped-def]
+    return next(
+        (t for t in mcp._tool_manager._tools.values() if t.name == name),
+        None,
+    )
+
+
+@pytest.mark.asyncio
+async def test_prime_memories_returns_facts() -> None:
+    service = MagicMock()
+    service.retrieve = AsyncMock(return_value=RetrieveResponse(facts=[_make_prime_row("r1")]))
+    mcp = create_mcp_server(service)
+
+    tool_fn = _get_tool_fn(mcp, "prime_memories")
+    assert tool_fn is not None, "prime_memories tool not registered"
+    result = await tool_fn.fn(app_name="my-app", ctx=_make_prime_ctx("test-key"))
+
+    assert isinstance(result, list)
+    assert result[0]["id"] == "r1"
+    service.retrieve.assert_awaited_once_with("test-key", "my-app")
+
+
+@pytest.mark.asyncio
+async def test_prime_memories_missing_api_key_returns_error() -> None:
+    service = MagicMock()
+    mcp = create_mcp_server(service)
+
+    tool_fn = _get_tool_fn(mcp, "prime_memories")
+    assert tool_fn is not None, "prime_memories tool not registered"
+    result = await tool_fn.fn(app_name="my-app", ctx=_make_prime_ctx(None))
+
+    assert result[0]["status"] == 401
+    service.retrieve.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_prime_memories_none_app_name_passes_through() -> None:
+    service = MagicMock()
+    service.retrieve = AsyncMock(return_value=RetrieveResponse(facts=[]))
+    mcp = create_mcp_server(service)
+
+    tool_fn = _get_tool_fn(mcp, "prime_memories")
+    assert tool_fn is not None, "prime_memories tool not registered"
+    await tool_fn.fn(app_name=None, ctx=_make_prime_ctx("test-key"))
+
+    service.retrieve.assert_awaited_once_with("test-key", None)
+
+
+@pytest.mark.asyncio
+async def test_get_skill_returns_instructions() -> None:
+    from src.app.mcp.skill import SKILL_INSTRUCTIONS
+
+    mcp = create_mcp_server(MagicMock())
+    tool_fn = _get_tool_fn(mcp, "get_skill")
+    assert tool_fn is not None, "get_skill tool not registered"
+    result = await tool_fn.fn()
+
+    assert result == SKILL_INSTRUCTIONS
+
+
+@pytest.mark.asyncio
+async def test_get_skill_listed_in_tools() -> None:
+    mcp = create_mcp_server(MagicMock())
+    tools = await mcp.list_tools()
+    assert "get_skill" in {t.name for t in tools}
