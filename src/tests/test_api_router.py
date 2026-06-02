@@ -1,4 +1,5 @@
 """Tests for create_api_router — Injector-FastAPI bridge and route mounting."""
+
 from __future__ import annotations
 
 import datetime
@@ -59,5 +60,3 @@ async def test_list_memory_route_reachable_via_injector() -> None:
         r = await c.get("/memory", headers={"Api-Key": "test-key"})
 
     assert r.status_code == 200
-
-

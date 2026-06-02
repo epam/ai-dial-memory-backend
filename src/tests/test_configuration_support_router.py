@@ -1,4 +1,5 @@
 """Tests for GET /v1/configuration-support/application-schema."""
+
 from __future__ import annotations
 
 import pytest

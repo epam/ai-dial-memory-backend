@@ -1,4 +1,5 @@
 """Full integration tests for REST routes through create_api_router + real auth."""
+
 from __future__ import annotations
 
 import datetime
@@ -54,6 +55,7 @@ def _dial(bucket: str = "files/bucket") -> MagicMock:
 # 401 — missing Api-Key
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_missing_api_key_returns_401() -> None:
     svc = MagicMock()
@@ -77,6 +79,7 @@ async def test_missing_api_key_on_delete_returns_401() -> None:
 # ---------------------------------------------------------------------------
 # 200 — happy paths
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_list_returns_200() -> None:
@@ -115,6 +118,7 @@ async def test_delete_returns_204() -> None:
 # 404 — not found
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_get_missing_row_returns_404() -> None:
     svc = MagicMock()
@@ -130,6 +134,7 @@ async def test_get_missing_row_returns_404() -> None:
 # 503 — StorageSyncError
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_storage_sync_error_returns_503_with_message() -> None:
     svc = MagicMock()
@@ -140,5 +145,3 @@ async def test_storage_sync_error_returns_503_with_message() -> None:
         r = await c.get("/memory", headers={"Api-Key": "k"})
     assert r.status_code == 503
     assert "message" in r.json()
-
-

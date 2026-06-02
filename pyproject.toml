@@ -2,9 +2,6 @@
 name = "ai-dial-memory-mcp"
 version = "0.1.0"
 description = ""
-authors = [
-    {name = "EPAM DIAL Team",email = "ai-dial@epam.com"}
-]
 readme = "README.md"
 license = {text = "Apache-2.0"}
 requires-python = ">=3.13,<3.14"
@@ -21,6 +18,9 @@ dependencies = [
     "pandas",
 ]
 
+
+[tool.poetry]
+package-mode = false
 
 [tool.poetry.group.dev.dependencies]
 black = "*"

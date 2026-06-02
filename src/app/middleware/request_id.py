@@ -1,4 +1,5 @@
 """Request-ID middleware — injects a UUID into every log record for each request."""
+
 from __future__ import annotations
 
 import logging

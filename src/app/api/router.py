@@ -1,5 +1,6 @@
 """API router factory — builds a FastAPI app with routes, exception handler middleware,
 and an Injector → FastAPI DI bridge."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -37,7 +38,9 @@ def create_api_router(injector: Injector, lifespan: Any = None) -> FastAPI:
         except RowNotFoundError as exc:
             return JSONResponse(status_code=404, content={"message": str(exc)})
         except Exception:
-            return JSONResponse(status_code=500, content={"message": "Internal server error"})
+            return JSONResponse(
+                status_code=500, content={"message": "Internal server error"}
+            )
 
     app.include_router(make_configuration_support_router())
     app.include_router(make_memory_router(service, _user_context_dep))

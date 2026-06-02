@@ -25,7 +25,7 @@ lint:
 	poetry run flake8 $(FILES)
 	poetry run black $(FILES) --check
 	poetry run isort $(FILES) --check-only --diff
-	poetry run autoflake $(FILES) --check
+	poetry run autoflake --recursive $(FILES) --check
 	poetry run mypy $(MYPY_DIRS)
 
 mypy:
@@ -34,7 +34,7 @@ mypy:
 # --- Formatting ---
 
 format:
-	poetry run autoflake $(FILES)
+	poetry run autoflake --recursive --in-place $(FILES)
 	poetry run black $(FILES)
 	poetry run isort $(FILES)
 
@@ -53,10 +53,10 @@ isort_check:
 	poetry run isort $(FILES) --check-only --diff
 
 autoflake:
-	poetry run autoflake $(FILES)
+	poetry run autoflake --recursive --in-place $(FILES)
 
 autoflake_check:
-	poetry run autoflake $(FILES) --check
+	poetry run autoflake --recursive $(FILES) --check
 
 flake8:
 	poetry run flake8 $(FILES)

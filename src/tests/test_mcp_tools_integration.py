@@ -1,4 +1,5 @@
 """Integration tests for MCP tools against a real MemoryService."""
+
 from __future__ import annotations
 
 import datetime
@@ -8,15 +9,15 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.app.mcp.tools import create_mcp_server
 from src.app.models.memory import MemoryRow, MemoryType
 from src.app.storage.common.repository import MemoryRepository
 from src.app.storage.lance.memory_service import MemoryService
-from src.app.mcp.tools import create_mcp_server
-
 
 # ---------------------------------------------------------------------------
 # In-memory MemoryRepository for integration tests
 # ---------------------------------------------------------------------------
+
 
 class InMemoryRepository(MemoryRepository):
     def __init__(self) -> None:
@@ -28,7 +29,9 @@ class InMemoryRepository(MemoryRepository):
     def get(self, bucket: str, row_id: str) -> MemoryRow | None:
         return self._rows.get(row_id)
 
-    def list_rows(self, bucket: str, memory_type: MemoryType | None = None) -> list[MemoryRow]:
+    def list_rows(
+        self, bucket: str, memory_type: MemoryType | None = None
+    ) -> list[MemoryRow]:
         rows = list(self._rows.values())
         if memory_type is not None:
             rows = [r for r in rows if r.memory_type == memory_type]
@@ -37,18 +40,29 @@ class InMemoryRepository(MemoryRepository):
     def delete(self, bucket: str, row_id: str) -> None:
         self._rows.pop(row_id, None)
 
-    def fts_search(self, bucket: str, query: str, memory_type: MemoryType, limit: int) -> list[MemoryRow]:
+    def fts_search(
+        self, bucket: str, query: str, memory_type: MemoryType, limit: int
+    ) -> list[MemoryRow]:
         return [
-            r for r in self._rows.values()
+            r
+            for r in self._rows.values()
             if r.memory_type == memory_type and query.lower() in r.content.lower()
         ][:limit]
 
-    def top_by_importance(self, bucket: str, memory_type: MemoryType, limit: int) -> list[MemoryRow]:
+    def top_by_importance(
+        self, bucket: str, memory_type: MemoryType, limit: int
+    ) -> list[MemoryRow]:
         rows = [r for r in self._rows.values() if r.memory_type == memory_type]
         return sorted(rows, key=lambda r: r.importance, reverse=True)[:limit]
 
-    def filter_by_context(self, bucket: str, context: str, memory_type: MemoryType, limit: int) -> list[MemoryRow]:
-        rows = [r for r in self._rows.values() if r.memory_type == memory_type and r.context == context]
+    def filter_by_context(
+        self, bucket: str, context: str, memory_type: MemoryType, limit: int
+    ) -> list[MemoryRow]:
+        rows = [
+            r
+            for r in self._rows.values()
+            if r.memory_type == memory_type and r.context == context
+        ]
         return sorted(rows, key=lambda r: r.importance, reverse=True)[:limit]
 
 
@@ -77,6 +91,7 @@ def _make_sync() -> MagicMock:
 # ---------------------------------------------------------------------------
 # Integration tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_store_memory_tool_persists_row_and_returns_id() -> None:

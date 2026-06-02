@@ -1,4 +1,5 @@
 """Tests for request_id middleware — UUID injected into log context per request."""
+
 from __future__ import annotations
 
 import json
@@ -36,7 +37,9 @@ def _make_app_with_logging() -> tuple[FastAPI, StringIO]:
 @pytest.mark.asyncio
 async def test_log_lines_within_request_carry_request_id() -> None:
     app, buf = _make_app_with_logging()
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as c:
         await c.get("/ping")
 
     lines = [json.loads(l) for l in buf.getvalue().splitlines() if l.strip()]
@@ -48,7 +51,9 @@ async def test_log_lines_within_request_carry_request_id() -> None:
 @pytest.mark.asyncio
 async def test_different_requests_get_different_request_ids() -> None:
     app, buf = _make_app_with_logging()
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as c:
         await c.get("/ping")
         await c.get("/ping")
 
@@ -61,14 +66,19 @@ async def test_different_requests_get_different_request_ids() -> None:
 @pytest.mark.asyncio
 async def test_request_id_is_a_uuid() -> None:
     import re
+
     uuid_re = re.compile(
         r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     )
     app, buf = _make_app_with_logging()
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as c:
         await c.get("/ping")
 
     lines = [json.loads(l) for l in buf.getvalue().splitlines() if l.strip()]
     for line in lines:
         if "request_id" in line:
-            assert uuid_re.match(line["request_id"]), f"Not a UUID: {line['request_id']}"
+            assert uuid_re.match(
+                line["request_id"]
+            ), f"Not a UUID: {line['request_id']}"

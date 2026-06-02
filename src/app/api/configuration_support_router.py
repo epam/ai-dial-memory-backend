@@ -1,4 +1,5 @@
 """Configuration-support router — exposes live JSON schema for DIAL Core."""
+
 from __future__ import annotations
 
 from typing import Any

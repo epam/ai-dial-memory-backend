@@ -1,4 +1,5 @@
 """Tests for DialJSONSchemaExtensions enum."""
+
 from __future__ import annotations
 
 from src.app.dial.dial_schema import DialJSONSchemaExtensions
@@ -6,9 +7,9 @@ from src.app.dial.dial_schema import DialJSONSchemaExtensions
 
 def test_all_keys_have_dial_prefix() -> None:
     for member in DialJSONSchemaExtensions:
-        assert member.value.startswith("dial:"), (
-            f"{member.name} has value {member.value!r}, expected 'dial:' prefix"
-        )
+        assert member.value.startswith(
+            "dial:"
+        ), f"{member.name} has value {member.value!r}, expected 'dial:' prefix"
 
 
 def test_known_keys_present() -> None:

@@ -1,4 +1,5 @@
 """Tests for BaseApplicationTypeConfig and custom field factories."""
+
 from __future__ import annotations
 
 import pytest
@@ -116,7 +117,9 @@ def test_property_order_follows_declaration_order() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_preview_field_excluded_without_env_var(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_preview_field_excluded_without_env_var(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.delenv("ENABLE_PREVIEW_FEATURES", raising=False)
 
     class _WithPreview(BaseApplicationTypeConfig):

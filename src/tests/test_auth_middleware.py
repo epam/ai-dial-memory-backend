@@ -1,4 +1,5 @@
 """Unit tests for auth middleware — UserContext and get_user_context dependency."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock

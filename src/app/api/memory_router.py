@@ -1,4 +1,5 @@
 """REST router for memory CRUD: GET /memory, GET /memory/{id}, DELETE /memory/{id}."""
+
 from __future__ import annotations
 
 from typing import Callable

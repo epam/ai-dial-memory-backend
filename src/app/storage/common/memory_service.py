@@ -1,17 +1,28 @@
 """AbstractMemoryService — public interface for the memory backend."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from src.app.models.memory import MemoryRow, MemoryType, RetrieveResponse, StoreMemoryInput, StoreMemoryOutput
+from src.app.models.memory import (
+    MemoryRow,
+    MemoryType,
+    RetrieveResponse,
+    StoreMemoryInput,
+    StoreMemoryOutput,
+)
 
 
 class AbstractMemoryService(ABC):
     @abstractmethod
-    async def store(self, api_key: str, memory_input: StoreMemoryInput) -> StoreMemoryOutput: ...
+    async def store(
+        self, api_key: str, memory_input: StoreMemoryInput
+    ) -> StoreMemoryOutput: ...
 
     @abstractmethod
-    async def search_archive(self, api_key: str, query: str, limit: int = 20) -> list[MemoryRow]: ...
+    async def search_archive(
+        self, api_key: str, query: str, limit: int = 20
+    ) -> list[MemoryRow]: ...
 
     @abstractmethod
     async def retrieve(

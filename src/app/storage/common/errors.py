@@ -1,4 +1,5 @@
 """Shared error types for the storage module public interface."""
+
 from __future__ import annotations
 
 

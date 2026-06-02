@@ -1,4 +1,5 @@
 """MCP tool registration via FastMCP (streamable HTTP transport)."""
+
 from __future__ import annotations
 
 from mcp.server.fastmcp import Context, FastMCP
@@ -19,7 +20,9 @@ def create_mcp_server(service: AbstractMemoryService) -> FastMCP:
     mcp: FastMCP = FastMCP(
         "ai-dial-memory",
         streamable_http_path="/",
-        transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
+        transport_security=TransportSecuritySettings(
+            enable_dns_rebinding_protection=False
+        ),
     )
 
     @mcp.tool()

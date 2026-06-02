@@ -1,4 +1,5 @@
 """Tests for AppModule — DI composition root that wires all modules together."""
+
 from __future__ import annotations
 
 import pytest
@@ -23,7 +24,9 @@ def test_app_module_provides_fastapi_app(monkeypatch: pytest.MonkeyPatch) -> Non
     assert isinstance(app, FastAPI)
 
 
-def test_app_module_memory_service_is_singleton(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_app_module_memory_service_is_singleton(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setenv("DIAL_URL", "http://dial.test")
     injector = Injector([AppModule()])
     svc1 = injector.get(AbstractMemoryService)
@@ -33,6 +36,7 @@ def test_app_module_memory_service_is_singleton(monkeypatch: pytest.MonkeyPatch)
 
 def test_app_module_settings_is_singleton(monkeypatch: pytest.MonkeyPatch) -> None:
     from src.app.config.app_settings import AppSettings
+
     monkeypatch.setenv("DIAL_URL", "http://dial.test")
     injector = Injector([AppModule()])
     assert injector.get(AppSettings) is injector.get(AppSettings)
