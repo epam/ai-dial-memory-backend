@@ -6,6 +6,7 @@ import datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from injector import Injector, Module, provider, singleton
 

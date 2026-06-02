@@ -9,6 +9,7 @@ without error so that the rest of the test suite can still load.
 On Linux / CI the real lancedb wheel is available and this stub is
 never invoked (the real package takes precedence).
 """
+
 from __future__ import annotations
 
 import sys
@@ -19,6 +20,7 @@ def _stub_lancedb() -> None:
     """Insert a minimal lancedb stub into sys.modules if lancedb is absent."""
     try:
         import lancedb  # noqa: F401 — real package present, nothing to do
+
         return
     except ImportError:
         pass
@@ -35,7 +37,9 @@ def _stub_lancedb() -> None:
     table_mod.LanceTable = _FakeLanceTable  # type: ignore[attr-defined]
     lancedb_mod.table = table_mod  # type: ignore[attr-defined]
     lancedb_mod.connect = lambda *a, **kw: (_ for _ in ()).throw(  # type: ignore[attr-defined]
-        RuntimeError("lancedb is not installed — use a mocked MemoryRepository in tests")
+        RuntimeError(
+            "lancedb is not installed — use a mocked MemoryRepository in tests"
+        )
     )
 
     sys.modules["lancedb"] = lancedb_mod

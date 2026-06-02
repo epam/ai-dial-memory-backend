@@ -48,7 +48,10 @@ def create_mcp_server(service: AbstractMemoryService) -> FastMCP:
             return {
                 "error": "validation_error",
                 "detail": [
-                    {"field": ".".join(str(l) for l in e["loc"]), "message": e["msg"]}
+                    {
+                        "field": ".".join(str(loc) for loc in e["loc"]),
+                        "message": e["msg"],
+                    }
                     for e in exc.errors()
                 ],
             }

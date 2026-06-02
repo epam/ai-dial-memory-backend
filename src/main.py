@@ -1,4 +1,5 @@
 """Production entrypoint: logging → DI → FastAPI → Uvicorn."""
+
 from __future__ import annotations
 
 import uvicorn

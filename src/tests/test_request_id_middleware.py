@@ -42,7 +42,7 @@ async def test_log_lines_within_request_carry_request_id() -> None:
     ) as c:
         await c.get("/ping")
 
-    lines = [json.loads(l) for l in buf.getvalue().splitlines() if l.strip()]
+    lines = [json.loads(line) for line in buf.getvalue().splitlines() if line.strip()]
     assert lines, "No log lines captured"
     for line in lines:
         assert "request_id" in line, f"Log line missing request_id: {line}"
@@ -57,8 +57,8 @@ async def test_different_requests_get_different_request_ids() -> None:
         await c.get("/ping")
         await c.get("/ping")
 
-    lines = [json.loads(l) for l in buf.getvalue().splitlines() if l.strip()]
-    ids = [l["request_id"] for l in lines if "request_id" in l]
+    lines = [json.loads(line) for line in buf.getvalue().splitlines() if line.strip()]
+    ids = [line["request_id"] for line in lines if "request_id" in line]
     assert len(ids) >= 2
     assert ids[0] != ids[1], "Different requests must have different request_ids"
 
@@ -76,7 +76,7 @@ async def test_request_id_is_a_uuid() -> None:
     ) as c:
         await c.get("/ping")
 
-    lines = [json.loads(l) for l in buf.getvalue().splitlines() if l.strip()]
+    lines = [json.loads(line) for line in buf.getvalue().splitlines() if line.strip()]
     for line in lines:
         if "request_id" in line:
             assert uuid_re.match(
