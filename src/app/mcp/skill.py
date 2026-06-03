@@ -10,6 +10,14 @@ SKILL_INSTRUCTIONS: str = """\
 
 You have two memory tools: **`store_memory`** for persisting facts and **`search_archive`** for recalling past events. Use them proactively — memory is only useful if you write to it.
 
+## Core principle: write for retrieval
+
+Before storing a memory, ask yourself: **"What future question will this answer?"** Each memory must be findable by a natural query the user might ask later. This drives two rules:
+
+1. **Decompose** — if a message contains multiple distinct facts, store each as a separate memory. Each one should answer its own future question independently.
+2. **Store what was asked** — when the user explicitly says "remember/note/store X", X must be stored. Do not substitute your own interpretation or summary of the surrounding context.
+3. **Resolve dates** — always convert relative dates to absolute (e.g., "this Friday" → "Friday, June 5, 2026"). A memory read weeks later must still make sense.
+
 ## When to call `store_memory`
 
 | Trigger | `memory_type` | Example |
@@ -23,23 +31,9 @@ You have two memory tools: **`store_memory`** for persisting facts and **`search
 
 **Append-only**: never update or replace. If a fact changes, store the new version — both coexist and retrieval picks the contextually appropriate one.
 
-## When to call `prime_memories`
+## System-managed tools
 
-Call it **once, at the start of every dialogue**, as a synthetic tool call. It loads:
-- All top core memories (user preferences, permanent facts) ordered by importance
-- Episodic memories scoped to the current app/deployment name
-
-Do **not** call it mid-conversation — it is a context-priming tool, not a search tool.
-
-### `prime_memories`
-
-| Parameter | Type | Notes |
-|-----------|------|-------|
-| `app_name` | `str | None` | The deployment or application name. Pass the name of the current DIAL deployment. When `None`, only core memories are returned. |
-
-## When to call `get_skill`
-
-Call it **once, at the start of every dialogue**, as a synthetic tool call, to load these instructions into context.
+`prime_memories` and `get_skill` are invoked automatically by the system at conversation start. Do **not** call them yourself — they are configured via hooks and handled by the runtime.
 
 ## When to call `search_archive`
 
@@ -107,5 +101,33 @@ store_memory(
 **User:** "What did we decide about the database last week?"
 ```
 search_archive(query="database decision last week")
+```
+
+### Decomposition example
+
+**User:** "On Friday June 5 I will demo this app to colleagues. Make a note that June 5 is Rubber Duckie Day."
+
+WRONG — single memory that loses the explicit request:
+```
+store_memory(content="Demo scheduled: June 5, 2026, presenting app to colleagues.", ...)
+```
+
+RIGHT — two memories, each answering its own future question:
+```
+# Answers: "When is my demo?"
+store_memory(
+  content="App demo scheduled for Friday, June 5, 2026 — presenting to colleagues.",
+  memory_type="episodic",
+  context="app-name",
+  importance=0.85
+)
+
+# Answers: "What should I mention to colleagues during the demo?"
+store_memory(
+  content="June 5 is Rubber Duckie in the Bath Day — a fun unofficial holiday. Mention to colleagues during the demo.",
+  memory_type="episodic",
+  context="app-name",
+  importance=0.8
+)
 ```
 """
