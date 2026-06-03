@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from mcp.server.fastmcp import Context, FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 from pydantic import ValidationError
@@ -11,9 +13,13 @@ from src.app.models.memory import MemoryType, StoreMemoryInput
 from src.app.storage.common.memory_service import AbstractMemoryService
 
 
-def _get_api_key(ctx: Context) -> str | None:
+def _get_api_key(ctx: Context[Any, Any]) -> str | None:
     """Extract Api-Key from the HTTP request headers."""
-    return ctx.request_context.request.headers.get("Api-Key")
+    request = ctx.request_context.request
+    if request is None:
+        return None
+    value: str | None = request.headers.get("Api-Key")
+    return value
 
 
 def create_mcp_server(service: AbstractMemoryService) -> FastMCP:
@@ -31,8 +37,8 @@ def create_mcp_server(service: AbstractMemoryService) -> FastMCP:
         memory_type: MemoryType,
         context: str,
         importance: float,
-        ctx: Context,
-    ) -> dict:
+        ctx: Context[Any, Any],
+    ) -> dict[str, Any]:
         """Store a new memory row."""
         api_key = _get_api_key(ctx)
         if not api_key:
@@ -62,7 +68,7 @@ def create_mcp_server(service: AbstractMemoryService) -> FastMCP:
             return {"error": str(exc)}
 
     @mcp.tool()
-    async def search_archive(query: str, ctx: Context) -> list[dict]:
+    async def search_archive(query: str, ctx: Context[Any, Any]) -> list[dict[str, Any]]:
         """Full-text search over episodic memories."""
         api_key = _get_api_key(ctx)
         if not api_key:
@@ -75,9 +81,9 @@ def create_mcp_server(service: AbstractMemoryService) -> FastMCP:
 
     @mcp.tool(name="prime_memories")
     async def prime_memories(
-        ctx: Context,
+        ctx: Context[Any, Any],
         app_name: str | None = None,
-    ) -> list[dict]:
+    ) -> list[dict[str, Any]]:
         """Return top core memories plus episodic memories scoped to the given
         app/deployment name. Designed as a synthetic tool call — inject at the
         start of every dialogue."""

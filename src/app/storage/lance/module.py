@@ -13,6 +13,6 @@ from src.app.storage.lance.sync import StorageSync
 
 class LanceModule(Module):
     def configure(self, binder: Binder) -> None:
-        binder.bind(MemoryRepository, to=LanceDbMemoryRepository, scope=singleton)
+        binder.bind(MemoryRepository, to=LanceDbMemoryRepository, scope=singleton)  # type: ignore[type-abstract]
         binder.bind(StorageSync, to=StorageSync, scope=singleton)
-        binder.bind(AbstractMemoryService, to=MemoryService, scope=singleton)
+        binder.bind(AbstractMemoryService, to=MemoryService, scope=singleton)  # type: ignore[type-abstract]

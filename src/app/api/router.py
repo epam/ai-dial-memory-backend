@@ -8,6 +8,8 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from injector import Injector
+from starlette.middleware.base import RequestResponseEndpoint
+from starlette.responses import Response
 
 from src.app.api.configuration_support_router import make_configuration_support_router
 from src.app.api.memory_router import make_memory_router
@@ -19,7 +21,7 @@ from src.app.storage.common.memory_service import AbstractMemoryService
 
 
 def create_api_router(injector: Injector, lifespan: Any = None) -> FastAPI:
-    service = injector.get(AbstractMemoryService)
+    service = injector.get(AbstractMemoryService)  # type: ignore[type-abstract]
 
     async def _user_context_dep(request: Request) -> UserContext:
         return await get_user_context(request)
@@ -30,7 +32,7 @@ def create_api_router(injector: Injector, lifespan: Any = None) -> FastAPI:
     app = FastAPI(lifespan=lifespan)
 
     @app.middleware("http")
-    async def _exception_handler(request: Request, call_next):  # noqa: ANN001
+    async def _exception_handler(request: Request, call_next: RequestResponseEndpoint) -> Response:
         try:
             return await call_next(request)
         except StorageSyncError as exc:

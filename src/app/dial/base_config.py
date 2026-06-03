@@ -63,7 +63,7 @@ class BaseApplicationTypeConfig(BaseModel):
             )
 
     @classmethod
-    def model_json_schema(cls, **kwargs: Any) -> dict[str, Any]:
+    def model_json_schema(cls, **kwargs: Any) -> dict[str, Any]:  # type: ignore[override]
         schema: dict[str, Any] = super().model_json_schema(**kwargs)
         schema = _flatten_ref(schema)
         schema = _strip_preview_fields(schema)

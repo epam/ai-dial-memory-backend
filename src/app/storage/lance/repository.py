@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import math
 from pathlib import Path
+from typing import Any
 
 import lancedb
 import pyarrow as pa
@@ -60,7 +61,7 @@ class LanceDbMemoryRepository(MemoryRepository):
         table = db.open_table(table_name)
         return table
 
-    def _row_to_model(self, record: dict) -> MemoryRow:
+    def _row_to_model(self, record: dict[str, Any]) -> MemoryRow:
         # pandas represents NULL as float nan for non-numeric columns; normalise to None.
         clean = {
             k: (None if isinstance(v, float) and math.isnan(v) else v)
