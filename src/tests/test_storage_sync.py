@@ -9,10 +9,9 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-
-from src.app.config.app_settings import AppSettings
 from aidial_client import ResourceNotFoundError
 
+from src.app.config.app_settings import AppSettings
 from src.app.dial.dial_storage import DialStorageError, DialStorageService
 from src.app.storage.lance.sync import StorageSync
 
