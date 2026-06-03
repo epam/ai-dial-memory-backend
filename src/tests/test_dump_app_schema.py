@@ -1,4 +1,5 @@
 """Tests for the schema dump script."""
+
 from __future__ import annotations
 
 import json

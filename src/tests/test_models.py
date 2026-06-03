@@ -49,9 +49,7 @@ def test_store_memory_input_importance_bounds_accepted(imp: float) -> None:
 
 
 def test_memory_row_json_round_trip() -> None:
-    ts = datetime.datetime(
-        2026, 3, 31, 12, 30, 45, tzinfo=datetime.UTC
-    )
+    ts = datetime.datetime(2026, 3, 31, 12, 30, 45, tzinfo=datetime.UTC)
     row = MemoryRow(
         id="uuid-1",
         memory_type="core",
@@ -116,9 +114,7 @@ def test_retrieve_request_defaults() -> None:
 
 
 def test_memory_row_round_trip_preserves_timestamp_in_json_dict() -> None:
-    ts = datetime.datetime(
-        2026, 1, 15, 8, 0, 0, 123456, tzinfo=datetime.UTC
-    )
+    ts = datetime.datetime(2026, 1, 15, 8, 0, 0, 123456, tzinfo=datetime.UTC)
     row = MemoryRow(
         id="id-2",
         memory_type="episodic",

@@ -1,4 +1,5 @@
 """Unit tests for get_app_config dependency."""
+
 from __future__ import annotations
 
 import json

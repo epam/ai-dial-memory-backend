@@ -1,10 +1,12 @@
 """Tests for create_api_router — Injector-FastAPI bridge and route mounting."""
+
 from __future__ import annotations
 
 import datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from injector import Injector, Module, provider, singleton
 
@@ -59,5 +61,3 @@ async def test_list_memory_route_reachable_via_injector() -> None:
         r = await c.get("/memory", headers={"Api-Key": "test-key"})
 
     assert r.status_code == 200
-
-

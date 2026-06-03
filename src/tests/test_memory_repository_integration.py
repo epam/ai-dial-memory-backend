@@ -1,4 +1,5 @@
 """Tests for LanceDbMemoryRepository.filter_by_context."""
+
 from __future__ import annotations
 
 import datetime
@@ -15,7 +16,9 @@ def _make_repo(tmp_path: Path) -> LanceDbMemoryRepository:
     return LanceDbMemoryRepository(settings)
 
 
-def _make_row(row_id: str, memory_type: str, context: str, importance: float = 0.5) -> MemoryRow:
+def _make_row(
+    row_id: str, memory_type: str, context: str, importance: float = 0.5
+) -> MemoryRow:
     return MemoryRow(
         id=row_id,
         memory_type=memory_type,

@@ -1,4 +1,5 @@
 """Unit tests for MCP tools — store_memory and search_archive."""
+
 from __future__ import annotations
 
 import datetime
@@ -156,6 +157,7 @@ async def test_search_archive_tool_schema_has_no_api_key_param() -> None:
 # prime_memories and get_skill tools
 # ---------------------------------------------------------------------------
 
+
 def _make_prime_ctx(api_key: str | None) -> MagicMock:
     """Build a mock FastMCP Context for prime_memories (headers.get() style)."""
     ctx = MagicMock()
@@ -165,6 +167,7 @@ def _make_prime_ctx(api_key: str | None) -> MagicMock:
 
 def _make_prime_row(row_id: str) -> MemoryRow:
     import datetime
+
     return MemoryRow(
         id=row_id,
         memory_type="core",
@@ -186,7 +189,9 @@ def _get_tool_fn(mcp, name: str):  # type: ignore[no-untyped-def]
 @pytest.mark.asyncio
 async def test_prime_memories_returns_facts() -> None:
     service = MagicMock()
-    service.retrieve = AsyncMock(return_value=RetrieveResponse(facts=[_make_prime_row("r1")]))
+    service.retrieve = AsyncMock(
+        return_value=RetrieveResponse(facts=[_make_prime_row("r1")])
+    )
     mcp = create_mcp_server(service)
 
     tool_fn = _get_tool_fn(mcp, "prime_memories")

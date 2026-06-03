@@ -1,4 +1,5 @@
 """BaseApplicationTypeConfig — Pydantic base for schema-driven DIAL apps."""
+
 from __future__ import annotations
 
 import copy
@@ -17,6 +18,7 @@ _FILE_MARKER = "x-dial-file"
 _PREVIEW_MARKER = "x-preview"
 _DIAL_SCHEMA_URL = "https://dial.epam.com/application_type_schemas/schema#"
 _DIAL_ID_PREFIX = "https://mydial.epam.com/custom_application_schemas/"
+
 
 def _defined_in_class(cls: type, name: str) -> bool:
     """Return True if *name* was explicitly set in *cls*'s own class body.
@@ -61,7 +63,7 @@ class BaseApplicationTypeConfig(BaseModel):
             )
 
     @classmethod
-    def model_json_schema(cls, **kwargs: Any) -> dict[str, Any]:
+    def model_json_schema(cls, **kwargs: Any) -> dict[str, Any]:  # type: ignore[override]
         schema: dict[str, Any] = super().model_json_schema(**kwargs)
         schema = _flatten_ref(schema)
         schema = _strip_preview_fields(schema)
@@ -122,7 +124,7 @@ def _flatten_ref(schema: dict[str, Any]) -> dict[str, Any]:
     ref = schema.get("$ref", "")
     if not ref.startswith("#/$defs/"):
         return schema
-    def_name = ref[len("#/$defs/"):]
+    def_name = ref[len("#/$defs/") :]
     defs: dict[str, Any] = schema.get("$defs", {})
     if def_name not in defs:
         return schema

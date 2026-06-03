@@ -1,4 +1,5 @@
 """MemoryAppConfig — schema-driven configuration for the AI DIAL Memory app."""
+
 from __future__ import annotations
 
 from src.app.dial.base_config import BaseApplicationTypeConfig, dial_config_field

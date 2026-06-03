@@ -2,10 +2,8 @@
 name = "ai-dial-memory-mcp"
 version = "0.1.0"
 description = ""
-authors = [
-    {name = "Aleksei Korota",email = "Aleksei_Korota@epam.com"}
-]
 readme = "README.md"
+license = {text = "Apache-2.0"}
 requires-python = ">=3.13,<3.14"
 dependencies = [
     "fastapi",
@@ -18,8 +16,13 @@ dependencies = [
     "python-json-logger",
     "mcp[cli]",
     "pandas",
+    "python-multipart>=0.0.27",
+    "urllib3>=2.7.0",
 ]
 
+
+[tool.poetry]
+package-mode = false
 
 [tool.poetry.group.dev.dependencies]
 black = "*"
@@ -31,6 +34,7 @@ pytest = "*"
 pytest-asyncio = "*"
 pytest-cov = "*"
 httpx = "*"
+pip-audit = "*"
 
 
 [build-system]
@@ -55,3 +59,7 @@ python_version = "3.13"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = ["lancedb.*", "pyarrow.*"]
+ignore_missing_imports = true
