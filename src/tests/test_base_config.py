@@ -1,9 +1,11 @@
 """Tests for BaseApplicationTypeConfig and custom field factories."""
+
 from __future__ import annotations
 
 import pytest
 
 from src.app.dial.base_config import (
+    _DIAL_ID_PREFIX,
     BaseApplicationTypeConfig,
     dial_config_field,
     dial_file_config_field,
@@ -58,7 +60,7 @@ def test_init_subclass_allows_class_with_neither_defined() -> None:
 
 def test_schema_contains_dollar_id() -> None:
     schema = _SampleConfig.model_json_schema()
-    assert schema["$id"] == "test-app"
+    assert schema["$id"] == f"{_DIAL_ID_PREFIX}test-app"
 
 
 def test_schema_contains_dollar_schema() -> None:
@@ -116,7 +118,9 @@ def test_property_order_follows_declaration_order() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_preview_field_excluded_without_env_var(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_preview_field_excluded_without_env_var(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.delenv("ENABLE_PREVIEW_FEATURES", raising=False)
 
     class _WithPreview(BaseApplicationTypeConfig):

@@ -1,4 +1,5 @@
 """Authentication middleware — UserContext and get_user_context FastAPI dependency."""
+
 from __future__ import annotations
 
 from fastapi import HTTPException, Request

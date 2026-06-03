@@ -1,4 +1,5 @@
 """App-config middleware — parse X-Dial-Application-Properties header into MemoryAppConfig."""
+
 from __future__ import annotations
 
 import json
@@ -24,6 +25,8 @@ async def get_app_config(request: Request) -> MemoryAppConfig:
         data = json.loads(header_value)
         return MemoryAppConfig.model_validate(data)
     except json.JSONDecodeError as exc:
-        raise HTTPException(status_code=422, detail=f"Invalid JSON in {APP_PROPERTIES_HEADER}: {exc}") from exc
+        raise HTTPException(
+            status_code=422, detail=f"Invalid JSON in {APP_PROPERTIES_HEADER}: {exc}"
+        ) from exc
     except ValidationError as exc:
         raise HTTPException(status_code=422, detail=exc.errors()) from exc

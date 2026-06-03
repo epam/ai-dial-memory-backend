@@ -1,4 +1,5 @@
 """Tests for MemoryAppConfig."""
+
 from __future__ import annotations
 
 from src.app.config.application import MemoryAppConfig

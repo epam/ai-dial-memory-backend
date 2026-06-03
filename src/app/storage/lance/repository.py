@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import math
 from pathlib import Path
+from typing import Any
 
 import lancedb
 import pyarrow as pa
@@ -19,17 +20,19 @@ def _sql_escape(value: str) -> str:
     return value.replace("'", "''")
 
 
-MEMORY_SCHEMA = pa.schema([
-    pa.field("id",              pa.string(),            nullable=False),
-    pa.field("memory_type",     pa.string(),            nullable=False),
-    pa.field("content",         pa.string(),            nullable=False),
-    pa.field("context",         pa.string(),            nullable=False),
-    pa.field("importance",      pa.float32(),           nullable=False),
-    pa.field("embedding_model", pa.string(),            nullable=True),
-    pa.field("vector",          pa.list_(pa.float32()), nullable=True),
-    pa.field("timestamp",       pa.timestamp("us"),     nullable=False),
-    pa.field("access_count",    pa.int32(),             nullable=False),
-])
+MEMORY_SCHEMA = pa.schema(
+    [
+        pa.field("id", pa.string(), nullable=False),
+        pa.field("memory_type", pa.string(), nullable=False),
+        pa.field("content", pa.string(), nullable=False),
+        pa.field("context", pa.string(), nullable=False),
+        pa.field("importance", pa.float32(), nullable=False),
+        pa.field("embedding_model", pa.string(), nullable=True),
+        pa.field("vector", pa.list_(pa.float32()), nullable=True),
+        pa.field("timestamp", pa.timestamp("us"), nullable=False),
+        pa.field("access_count", pa.int32(), nullable=False),
+    ]
+)
 
 
 @inject
@@ -58,7 +61,7 @@ class LanceDbMemoryRepository(MemoryRepository):
         table = db.open_table(table_name)
         return table
 
-    def _row_to_model(self, record: dict) -> MemoryRow:
+    def _row_to_model(self, record: dict[str, Any]) -> MemoryRow:
         # pandas represents NULL as float nan for non-numeric columns; normalise to None.
         clean = {
             k: (None if isinstance(v, float) and math.isnan(v) else v)
@@ -75,15 +78,17 @@ class LanceDbMemoryRepository(MemoryRepository):
         table = self._open_table(bucket)
         results = (
             table.search()
-                 .where(f"id = '{_sql_escape(row_id)}'", prefilter=True)
-                 .limit(1)
-                 .to_pandas()
+            .where(f"id = '{_sql_escape(row_id)}'", prefilter=True)
+            .limit(1)
+            .to_pandas()
         )
         if results.empty:
             return None
         return self._row_to_model(results.to_dict("records")[0])
 
-    def list_rows(self, bucket: str, memory_type: MemoryType | None = None) -> list[MemoryRow]:
+    def list_rows(
+        self, bucket: str, memory_type: MemoryType | None = None
+    ) -> list[MemoryRow]:
         table = self._open_table(bucket)
         q = table.search()
         if memory_type is not None:
@@ -96,41 +101,47 @@ class LanceDbMemoryRepository(MemoryRepository):
         table.delete(f"id = '{_sql_escape(row_id)}'")
         logger.debug("Deleted row %s from bucket %s", row_id, bucket)
 
-    def fts_search(self, bucket: str, query: str, memory_type: MemoryType, limit: int) -> list[MemoryRow]:
+    def fts_search(
+        self, bucket: str, query: str, memory_type: MemoryType, limit: int
+    ) -> list[MemoryRow]:
         table = self._open_table(bucket)
         records = (
             table.search(query, query_type="fts")
-                 .where(f"memory_type = '{_sql_escape(memory_type)}'", prefilter=True)
-                 .limit(limit)
-                 .to_pandas()
-                 .to_dict("records")
+            .where(f"memory_type = '{_sql_escape(memory_type)}'", prefilter=True)
+            .limit(limit)
+            .to_pandas()
+            .to_dict("records")
         )
         return [self._row_to_model(r) for r in records]
 
-    def top_by_importance(self, bucket: str, memory_type: MemoryType, limit: int) -> list[MemoryRow]:
+    def top_by_importance(
+        self, bucket: str, memory_type: MemoryType, limit: int
+    ) -> list[MemoryRow]:
         table = self._open_table(bucket)
         # TODO: push ORDER BY importance DESC LIMIT n to LanceDB once order_by() lands
         #       in a released Python client (not yet in 0.30.2).
         records = (
             table.search()
-                 .where(f"memory_type = '{_sql_escape(memory_type)}'", prefilter=True)
-                 .to_pandas()
-                 .sort_values("importance", ascending=False)
-                 .head(limit)
-                 .to_dict("records")
+            .where(f"memory_type = '{_sql_escape(memory_type)}'", prefilter=True)
+            .to_pandas()
+            .sort_values("importance", ascending=False)
+            .head(limit)
+            .to_dict("records")
         )
         return [self._row_to_model(r) for r in records]
 
-    def filter_by_context(self, bucket: str, context: str, memory_type: MemoryType, limit: int) -> list[MemoryRow]:
+    def filter_by_context(
+        self, bucket: str, context: str, memory_type: MemoryType, limit: int
+    ) -> list[MemoryRow]:
         table = self._open_table(bucket)
         records = (
             table.search()
-                 .where(
-                     f"memory_type = '{_sql_escape(memory_type)}' AND context = '{_sql_escape(context)}'",
-                     prefilter=True,
-                 )
-                 .limit(limit)
-                 .to_pandas()
-                 .to_dict("records")
+            .where(
+                f"memory_type = '{_sql_escape(memory_type)}' AND context = '{_sql_escape(context)}'",
+                prefilter=True,
+            )
+            .limit(limit)
+            .to_pandas()
+            .to_dict("records")
         )
         return [self._row_to_model(r) for r in records]

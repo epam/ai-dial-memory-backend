@@ -1,4 +1,5 @@
 """AppModule — root DI composition: wires DialModule, LanceModule, FastAPI."""
+
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
@@ -23,9 +24,13 @@ class AppModule(Module):
 
     @provider
     @singleton
-    def provide_app(self, service: AbstractMemoryService, injector: Injector) -> FastAPI:
+    def provide_app(
+        self, service: AbstractMemoryService, injector: Injector
+    ) -> FastAPI:
         mcp_server = create_mcp_server(service)
-        mcp_sub_app = mcp_server.streamable_http_app()  # lazily initializes session_manager
+        mcp_sub_app = (
+            mcp_server.streamable_http_app()
+        )  # lazily initializes session_manager
 
         @asynccontextmanager
         async def lifespan(app: FastAPI) -> AsyncIterator[None]:

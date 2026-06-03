@@ -1,7 +1,8 @@
 """REST router for memory CRUD: GET /memory, GET /memory/{id}, DELETE /memory/{id}."""
+
 from __future__ import annotations
 
-from typing import Callable
+from typing import Any, Callable
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
@@ -13,7 +14,7 @@ from src.app.storage.common.memory_service import AbstractMemoryService
 
 def make_memory_router(
     service: AbstractMemoryService,
-    user_context_dep: Callable,
+    user_context_dep: Callable[..., Any],
 ) -> APIRouter:
     router = APIRouter()
 

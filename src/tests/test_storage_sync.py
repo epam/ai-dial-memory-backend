@@ -1,4 +1,5 @@
 """Tests for StorageSync — directory pack/unpack via tar.gz."""
+
 from __future__ import annotations
 
 import asyncio
@@ -8,15 +9,16 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from aidial_client import ResourceNotFoundError
 
 from src.app.config.app_settings import AppSettings
 from src.app.dial.dial_storage import DialStorageError, DialStorageService
 from src.app.storage.lance.sync import StorageSync
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_fake_lance_dir(base: Path) -> Path:
     """Populate a fake memory.lance directory tree like LanceDB would create."""
@@ -63,7 +65,9 @@ def dial() -> AsyncMock:
     return d
 
 
-async def _fake_tar_gz_download(api_key: str, remote_url: str, local_path: Path) -> None:
+async def _fake_tar_gz_download(
+    api_key: str, remote_url: str, local_path: Path
+) -> None:
     """Simulate a successful download by writing a minimal valid empty tar.gz."""
     local_path.write_bytes(_make_empty_tar_gz())
 
@@ -71,6 +75,7 @@ async def _fake_tar_gz_download(api_key: str, remote_url: str, local_path: Path)
 # ---------------------------------------------------------------------------
 # _sync_up
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_sync_up_uploads_tar_gz_not_raw_directory(tmp_path: Path) -> None:
@@ -89,14 +94,16 @@ async def test_sync_up_uploads_tar_gz_not_raw_directory(tmp_path: Path) -> None:
 
     assert len(captured) == 1
     remote_url, raw = next(iter(captured.items()))
-    assert remote_url.endswith("memory.tar.gz"), f"Expected .tar.gz remote URL, got {remote_url!r}"
+    assert remote_url.endswith(
+        "memory.tar.gz"
+    ), f"Expected .tar.gz remote URL, got {remote_url!r}"
 
     with tarfile.open(fileobj=io.BytesIO(raw), mode="r:gz") as tar:
         names = tar.getnames()
 
-    assert any(n.startswith("memory.lance") for n in names), (
-        f"tar archive did not contain memory.lance entries: {names}"
-    )
+    assert any(
+        n.startswith("memory.lance") for n in names
+    ), f"tar archive did not contain memory.lance entries: {names}"
 
 
 @pytest.mark.asyncio
@@ -114,6 +121,7 @@ async def test_sync_up_cleans_up_temp_tar(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 # _sync_down
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_sync_down_extracts_tar_gz_to_lance_dir(tmp_path: Path) -> None:
@@ -151,12 +159,17 @@ async def test_sync_down_leaves_no_lance_dir_on_404(tmp_path: Path) -> None:
     local_lance = tmp_path / "bucket" / "memory.lance"
     sync, dial = _make_sync(tmp_path)
 
-    dial.download.side_effect = DialStorageError("404 not found")
+    not_found = ResourceNotFoundError("not found")
+    err = DialStorageError("404 not found")
+    err.__cause__ = not_found
+    dial.download.side_effect = err
 
     await sync._sync_down("key", "files/user123", local_lance)
 
     assert not local_lance.exists(), "memory.lance must not be pre-created on 404"
-    assert local_lance.parent.is_dir(), "parent dir must exist so LanceDB can write into it"
+    assert (
+        local_lance.parent.is_dir()
+    ), "parent dir must exist so LanceDB can write into it"
 
 
 @pytest.mark.asyncio
@@ -186,6 +199,7 @@ async def test_sync_down_cleans_up_temp_tar(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 # open() — public API
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_sync_down_runs_before_yield(
@@ -239,7 +253,9 @@ async def test_same_bucket_lock_serializes(
     release_download = asyncio.Event()
     marker: list[str] = []
 
-    async def blocking_download(api_key: str, remote_url: str, local_path: Path) -> None:
+    async def blocking_download(
+        api_key: str, remote_url: str, local_path: Path
+    ) -> None:
         local_path.write_bytes(_make_empty_tar_gz())
         inside_first.set()
         await release_download.wait()

@@ -1,4 +1,5 @@
 """Tests for centralized exception handler — consistent JSON message shape."""
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock

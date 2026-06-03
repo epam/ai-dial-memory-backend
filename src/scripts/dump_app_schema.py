@@ -8,6 +8,7 @@ Usage:
     # Check that committed file is up to date (used in CI)
     ENABLE_PREVIEW_FEATURES=true python scripts/dump_app_schema.py docs/generated-app-schema.json --check
 """
+
 from __future__ import annotations
 
 import json

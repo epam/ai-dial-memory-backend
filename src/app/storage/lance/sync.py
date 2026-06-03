@@ -124,7 +124,12 @@ class StorageSync:
         short_bucket = bucket_id[:8]
         lock = self._lock_for(bucket_id)
         mode = "write" if write else "read"
-        logger.info("storage open [%s] bucket=%s storage_home=%s", mode, short_bucket, storage_home)
+        logger.info(
+            "storage open [%s] bucket=%s storage_home=%s",
+            mode,
+            short_bucket,
+            storage_home,
+        )
         async with lock:
             local_lance = self._settings.tmp_dir / bucket_id / "memory.lance"
             try:

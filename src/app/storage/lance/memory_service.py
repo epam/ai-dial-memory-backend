@@ -1,4 +1,5 @@
 """Concrete MemoryService — LanceDB backend implementation."""
+
 from __future__ import annotations
 
 import datetime
@@ -25,7 +26,9 @@ class MemoryService(AbstractMemoryService):
         self._sync = sync
         self._repo = repo
 
-    async def store(self, api_key: str, memory_input: StoreMemoryInput) -> StoreMemoryOutput:
+    async def store(
+        self, api_key: str, memory_input: StoreMemoryInput
+    ) -> StoreMemoryOutput:
         row = MemoryRow(
             id=str(uuid.uuid4()),
             memory_type=memory_input.memory_type,
@@ -39,7 +42,9 @@ class MemoryService(AbstractMemoryService):
             self._repo.append(bucket, row)
         return StoreMemoryOutput(id=row.id, stored=True)
 
-    async def search_archive(self, api_key: str, query: str, limit: int = 20) -> list[MemoryRow]:
+    async def search_archive(
+        self, api_key: str, query: str, limit: int = 20
+    ) -> list[MemoryRow]:
         async with self._sync.open(api_key, write=False) as (_, bucket):
             return self._repo.fts_search(bucket, query, "episodic", limit)
 

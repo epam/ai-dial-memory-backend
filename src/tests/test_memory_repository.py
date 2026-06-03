@@ -45,7 +45,9 @@ def _fake_df(records: list[dict]) -> MagicMock:
     def _head(n: int) -> MagicMock:
         sliced = sorted_recs[:n]
         hm = MagicMock()
-        hm.to_dict.side_effect = lambda orient: list(sliced) if orient == "records" else []
+        hm.to_dict.side_effect = lambda orient: (
+            list(sliced) if orient == "records" else []
+        )
         return hm
 
     sorted_m.head.side_effect = _head
@@ -170,8 +172,8 @@ def test_top_by_importance_returns_top_n_not_arbitrary_n(settings: AppSettings) 
     db.table_names.return_value = ["memory"]
     db.open_table.return_value = table
     rows = [
-        _row_dict("low",  importance=0.1),
-        _row_dict("mid",  importance=0.5),
+        _row_dict("low", importance=0.1),
+        _row_dict("mid", importance=0.5),
         _row_dict("high", importance=0.9),
     ]
     chain = _query_chain(_fake_df(rows))
