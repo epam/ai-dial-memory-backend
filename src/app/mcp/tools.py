@@ -68,7 +68,9 @@ def create_mcp_server(service: AbstractMemoryService) -> FastMCP:
             return {"error": str(exc)}
 
     @mcp.tool()
-    async def search_archive(query: str, ctx: Context[Any, Any]) -> list[dict[str, Any]]:
+    async def search_archive(
+        query: str, ctx: Context[Any, Any]
+    ) -> list[dict[str, Any]]:
         """Full-text search over episodic memories."""
         api_key = _get_api_key(ctx)
         if not api_key:

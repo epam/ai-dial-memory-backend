@@ -32,7 +32,9 @@ def create_api_router(injector: Injector, lifespan: Any = None) -> FastAPI:
     app = FastAPI(lifespan=lifespan)
 
     @app.middleware("http")
-    async def _exception_handler(request: Request, call_next: RequestResponseEndpoint) -> Response:
+    async def _exception_handler(
+        request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
         try:
             return await call_next(request)
         except StorageSyncError as exc:

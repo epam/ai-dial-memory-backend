@@ -27,7 +27,9 @@ logging.setLogRecordFactory(_record_factory)
 
 
 class RequestIdMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
         rid = str(uuid.uuid4())
         token = _request_id_var.set(rid)
         try:
