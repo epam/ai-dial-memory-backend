@@ -11,6 +11,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.app.config.app_settings import AppSettings
+from aidial_client import ResourceNotFoundError
+
 from src.app.dial.dial_storage import DialStorageError, DialStorageService
 from src.app.storage.lance.sync import StorageSync
 
@@ -158,7 +160,10 @@ async def test_sync_down_leaves_no_lance_dir_on_404(tmp_path: Path) -> None:
     local_lance = tmp_path / "bucket" / "memory.lance"
     sync, dial = _make_sync(tmp_path)
 
-    dial.download.side_effect = DialStorageError("404 not found")
+    not_found = ResourceNotFoundError("not found")
+    err = DialStorageError("404 not found")
+    err.__cause__ = not_found
+    dial.download.side_effect = err
 
     await sync._sync_down("key", "files/user123", local_lance)
 
