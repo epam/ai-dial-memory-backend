@@ -1,0 +1,29 @@
+
+# Python
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+
+# IDE
+.idea/
+.cursor/
+.codemie/
+
+# Superpowers plans (local dev tooling)
+docs/superpowers/
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+/.beads/
+
+#claude
+AGENTS.md
+
+.env

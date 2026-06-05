@@ -1,0 +1,65 @@
+[project]
+name = "ai-dial-memory-mcp"
+version = "0.1.0"
+description = ""
+readme = "README.md"
+license = {text = "Apache-2.0"}
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "injector",
+    "fastapi-injector",
+    "lancedb",
+    "pydantic-settings",
+    "aidial-client>=0.7.1,<0.8.0",
+    "python-json-logger",
+    "mcp[cli]",
+    "pandas",
+    "python-multipart>=0.0.27",
+    "urllib3>=2.7.0",
+]
+
+
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.group.dev.dependencies]
+black = "*"
+isort = "*"
+flake8 = "*"
+autoflake = "*"
+mypy = "*"
+pytest = "*"
+pytest-asyncio = "*"
+pytest-cov = "*"
+httpx = "*"
+pip-audit = "*"
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.pytest.ini_options]
+testpaths = ["src/tests", "tests"]
+asyncio_mode = "auto"
+
+[tool.black]
+line-length = 88
+target-version = ["py313"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = ["lancedb.*", "pyarrow.*"]
+ignore_missing_imports = true
