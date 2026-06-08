@@ -26,9 +26,17 @@ class DialStorageService:
     async def get_storage_home(self, api_key: str) -> str:
         client = self._make_client(api_key)
         try:
-            home = str(await client.my_files_home())
+            raw = await client.bucket.get_raw()
+            if not raw.appdata:
+                raise DialStorageError(
+                    "Cannot determine user storage: appdata is missing from bucket response. "
+                    "Ensure the request is routed through DIAL with a valid user context."
+                )
+            home = f"files/{raw.appdata}"
             logger.info("resolved storage home: %s", home)
             return home
+        except DialStorageError:
+            raise
         except Exception as exc:
             raise DialStorageError(f"Failed to resolve storage home: {exc}") from exc
 
