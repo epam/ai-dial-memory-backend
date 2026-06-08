@@ -21,23 +21,48 @@ def service(settings: AppSettings) -> DialStorageService:
     return DialStorageService(settings)
 
 
-async def test_get_storage_home_calls_my_files_home(
+async def test_get_storage_home_uses_appdata_when_present(
     service: DialStorageService,
 ) -> None:
-    """_make_client is called with correct api_key; my_files_home result is returned."""
-    mock_client = AsyncMock()
-    mock_client.my_files_home = AsyncMock(return_value="files/bucket-abc")
+    """When appdata is present (DIAL service key), storage home uses appdata path."""
+    from aidial_client.types.bucket import BucketResponse
+
+    mock_bucket = AsyncMock()
+    mock_bucket.get_raw = AsyncMock(
+        return_value=BucketResponse(
+            bucket="svc-bucket", appdata="user-abc/appdata/ai-dial-memory"
+        )
+    )
+    mock_client = MagicMock()
+    mock_client.bucket = mock_bucket
 
     with patch.object(
-        service,
-        "_make_client",
-        return_value=mock_client,
+        service, "_make_client", return_value=mock_client
     ) as mock_factory:
         result = await service.get_storage_home("test-key")
 
     mock_factory.assert_called_once_with("test-key")
-    mock_client.my_files_home.assert_called_once()
-    assert result == "files/bucket-abc"
+    assert result == "files/user-abc/appdata/ai-dial-memory"
+
+
+async def test_get_storage_home_raises_when_appdata_absent(
+    service: DialStorageService,
+) -> None:
+    """When appdata is absent we cannot guarantee user isolation — must raise."""
+    from aidial_client.types.bucket import BucketResponse
+
+    from src.app.dial.dial_storage import DialStorageError
+
+    mock_bucket = AsyncMock()
+    mock_bucket.get_raw = AsyncMock(
+        return_value=BucketResponse(bucket="svc-bucket", appdata=None)
+    )
+    mock_client = MagicMock()
+    mock_client.bucket = mock_bucket
+
+    with patch.object(service, "_make_client", return_value=mock_client):
+        with pytest.raises(DialStorageError, match="appdata is missing"):
+            await service.get_storage_home("test-key")
 
 
 async def test_download_writes_to_local_path(
