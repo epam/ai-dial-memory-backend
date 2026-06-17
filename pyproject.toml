@@ -16,7 +16,7 @@ dependencies = [
     "python-json-logger",
     "mcp[cli]",
     "pandas",
-    "python-multipart>=0.0.27",
+    "python-multipart>=0.0.31",
     "urllib3>=2.7.0",
 ]
 
