@@ -20,7 +20,9 @@ from src.app.storage.common.errors import RowNotFoundError, StorageSyncError
 from src.app.storage.common.memory_service import AbstractMemoryService
 
 
-def create_api_router(injector: Injector, lifespan: Any = None) -> FastAPI:
+def create_api_router(
+    injector: Injector, lifespan: Any = None, app: FastAPI | None = None
+) -> FastAPI:
     service = injector.get(AbstractMemoryService)  # type: ignore[type-abstract]
 
     async def _user_context_dep(request: Request) -> UserContext:
@@ -29,7 +31,8 @@ def create_api_router(injector: Injector, lifespan: Any = None) -> FastAPI:
     async def _app_config_dep(request: Request) -> MemoryAppConfig:
         return await get_app_config(request)
 
-    app = FastAPI(lifespan=lifespan)
+    if app is None:
+        app = FastAPI(lifespan=lifespan)
 
     @app.middleware("http")
     async def _exception_handler(

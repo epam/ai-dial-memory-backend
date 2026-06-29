@@ -13,6 +13,7 @@ dependencies = [
     "lancedb",
     "pydantic-settings",
     "aidial-client>=0.7.1,<0.8.0",
+    "aidial-sdk>=0.37.0",
     "python-json-logger",
     "mcp[cli]",
     "pandas",
