@@ -100,25 +100,84 @@ DIAL Core injects per-instance settings via the `X-Dial-Application-Properties` 
 | `tier1_limit` | `5` | How many top core memories to inject at dialogue start |
 | `tier2_limit` | `10` | How many episodic memories to inject per `app_name` scope |
 
-### Hooks integration
+### Admin Panel Configuration
 
-AI DIAL Memory is designed to work with [Quick Apps Hooks](https://github.com/epam/ai-dial-quickapps). Add a
-`prime_memories` hook to your Quick App manifest to automatically inject memories at the start of every dialogue:
+This section describes how to wire AI DIAL Memory into a Quick App using the DIAL admin panel.
+
+The snippets below use two placeholders — replace them with your own values:
+
+| Placeholder | Description |
+|---|---|
+| `<MEMORY_APP_ID>` | ID you assign to the memory application in Step 1. Referenced as `deployment_id` in Step 2. |
+| `<TOOLSET_NAME>` | Name you assign to the toolset in Step 2. Must be used as `toolset_name` in every hook. |
+
+#### Step 1 — Register the Memory Application
+
+In the admin panel go to **Entities → Applications** and create a new application:
+
+- **ID** — `<MEMORY_APP_ID>`
+- **Display Name** — arbitrary
+- **Application type** — select **MCP Endpoint**
+- **Endpoint URL** — the MCP server address, e.g. `http://dial-memory-backend.dial-memory-backend/mcp`
+- Enable the **Forward per-request key** flag so the user's `Api-Key` is forwarded on every call
+- Set the application as **public**, or configure availability for specific roles so the Quick App can access it
+
+#### Step 2 — Configure the Quick App
+
+In the admin panel go to **Assets → Applications** and create a new application:
+
+- **Source type** — `App Runner: Quick App 2.0`
+
+Open the **Parameters** tab and add the memory application as a toolset in the `tool_sets` field:
 
 ```json
 {
-  "hooks": [
-    {
-      "kind": "tool_call",
-      "event": "on_request_start",
-      "toolset_name": "memory_server",
-      "tool_name": "prime_memories",
-      "arguments": { "app_name": "my-app" },
-      "frequency": "always"
-    }
-  ]
+  "type": "dial-app",
+  "deployment_id": "<MEMORY_APP_ID>",
+  "name": "<TOOLSET_NAME>",
+  "transport": "mcp"
 }
 ```
+
+Then add the following two hooks in the `hooks` field.  
+`get_skill` injects the memory interaction skill into the agent context; `prime_memories` preloads the key memory records:
+
+```json
+[
+  {
+    "name": "memory_skill_hook",
+    "kind": "tool_call",
+    "toolset_name": "<TOOLSET_NAME>",
+    "arguments": {},
+    "frequency": "append_if_changed",
+    "event": "on_request_start",
+    "tool_name": "get_skill"
+  },
+  {
+    "name": "prime_memory_hook",
+    "kind": "tool_call",
+    "toolset_name": "<TOOLSET_NAME>",
+    "arguments": {},
+    "frequency": "append_if_changed",
+    "event": "on_request_start",
+    "tool_name": "prime_memories"
+  }
+]
+```
+
+#### Step 3 — Verify (optional)
+
+To confirm the hooks are firing correctly, enable debug-level stage display by adding the following to the `features` field:
+
+```json
+{
+  "stage_display": {
+    "level": "debug"
+  }
+}
+```
+
+This makes hook tool calls visible in the UI so you can confirm `get_skill` and `prime_memories` are invoked at the start of each request.
 
 ## Local Development
 
