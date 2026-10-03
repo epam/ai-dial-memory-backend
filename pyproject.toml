@@ -17,7 +17,7 @@ dependencies = [
     "mcp[cli]",
     "pandas",
     "python-multipart>=0.0.27",
-    "urllib3>=2.7.0",
+    "urllib3>=2.8.0",
 ]
 
 
