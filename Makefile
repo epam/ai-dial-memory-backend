@@ -10,8 +10,11 @@ FILES ?= $(SRC_DIRS)
 PYTHON ?= python3.13
 ARGS ?=
 
+# Any non-empty CI value (even 'false' or '0') means that CI is enabled
+CI ?=
+
 init_venv:
-	poetry env use $(PYTHON)
+	$(if $(CI),,poetry env use $(PYTHON))
 
 install_dev:
 	poetry install
